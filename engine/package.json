@@ -1,0 +1,12 @@
+{
+  "name": "klaro-pulse-engine",
+  "version": "2.0.0",
+  "type": "module",
+  "main": "runner.js",
+  "dependencies": {
+    "groq-sdk": "^0.3.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
+    "playwright": "^1.42.1"
+  }
+}
