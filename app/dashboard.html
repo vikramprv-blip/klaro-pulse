@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klaro Pulse — Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: #020617; color: #cbd5e1; }
+.sidebar { width: 240px; min-height: 100vh; background: #0a0f1e; border-right: 1px solid #1e293b; position: fixed; top: 0; left: 0; }
+.main { margin-left: 240px; padding: 40px; min-height: 100vh; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 14px; color: #64748b; cursor: pointer; border-radius: 8px; margin: 2px 8px; transition: all 0.15s; text-decoration: none; }
+.nav-item:hover, .nav-item.active { background: #1e293b; color: #f1f5f9; }
+.nav-item.active { color: #818cf8; }
+.card { background: #0d1629; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge.passed { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+.badge.failed { background: #1c0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+.badge.running { background: #1c1a08; color: #fbbf24; border: 1px solid #78350f; }
+.badge.pending { background: #111827; color: #94a3b8; border: 1px solid #374151; }
+.score-ring { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; border: 3px solid; }
+.tab { padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.15s; color: #64748b; }
+.tab.active { background: #1e293b; color: #f1f5f9; }
+.step-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid #1e293b; }
+.step-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.heal-tag { font-size: 10px; background: #451a03; color: #fb923c; border: 1px solid #9a3412; padding: 1px 7px; border-radius: 20px; font-weight: 700; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #0d1629; border: 1px solid #1e293b; border-radius: 20px; width: 600px; max-height: 80vh; overflow-y: auto; padding: 32px; }
+input, select, textarea { background: #0a0f1e; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 14px; color: #f1f5f9; font-size: 14px; width: 100%; outline: none; font-family: 'Inter', sans-serif; }
+input:focus, select:focus, textarea:focus { border-color: #4f46e5; }
+label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+.btn-primary { background: #4f46e5; color: white; font-weight: 700; padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; transition: all 0.15s; }
+.btn-primary:hover { background: #4338ca; }
+.btn-secondary { background: transparent; color: #94a3b8; font-weight: 600; padding: 10px 20px; border-radius: 10px; border: 1px solid #1e293b; cursor: pointer; font-size: 14px; transition: all 0.15s; }
+.btn-secondary:hover { background: #1e293b; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div style="padding: 24px 20px 20px;">
+    <div style="font-size: 17px; font-weight: 900; color: white; letter-spacing: -0.5px;">KLARO <span style="color: #6366f1;">PULSE</span></div>
+    <div style="font-size: 11px; color: #334155; margin-top: 2px;">AI QA Platform</div>
+  </div>
+
+  <nav style="padding: 8px 0;">
+    <a class="nav-item active" onclick="showView('journeys')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Journeys
+    </a>
+    <a class="nav-item" onclick="showView('runs')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Test Runs
+    </a>
+    <a class="nav-item" onclick="showView('audits')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Audit Reports
+    </a>
+    <a class="nav-item" onclick="showView('reports')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      PDF Reports
+    </a>
+  </nav>
+
+  <div style="position: absolute; bottom: 24px; left: 0; right: 0; padding: 0 12px;">
+    <div style="background: #0a1628; border: 1px solid #1e293b; border-radius: 12px; padding: 14px;">
+      <div style="font-size: 11px; color: #4b5563; margin-bottom: 4px;">PLAN</div>
+      <div style="font-size: 14px; font-weight: 700; color: #818cf8;">Growth · $499/mo</div>
+      <div style="font-size: 11px; color: #4b5563; margin-top: 8px;" id="run-count">Loading usage...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+    <div>
+      <h1 style="font-size: 24px; font-weight: 900; color: white;" id="view-title">Journey Monitor</h1>
+      <p style="font-size: 13px; color: #475569; margin-top: 2px;" id="view-sub">All active journeys and their latest results</p>
+    </div>
+    <div style="display: flex; gap: 10px;" id="header-actions">
+      <button class="btn-primary" onclick="openNewJourneyModal()">+ New Journey</button>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;" id="stats-row"></div>
+
+  <!-- Dynamic content -->
+  <div id="view-content"></div>
+</div>
+
+<!-- New Journey Modal -->
+<div class="modal-overlay" id="journey-modal">
+  <div class="modal">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <div style="font-size: 18px; font-weight: 800; color: white;">New Journey</div>
+      <button onclick="closeModal()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div>
+        <label>Journey Name</label>
+        <input id="j-name" type="text" placeholder="e.g. User Signup Flow" />
+      </div>
+      <div>
+        <label>Goal (plain English)</label>
+        <textarea id="j-goal" rows="3" placeholder="e.g. Verify a user can create an account, verify their email, and reach the dashboard"></textarea>
+      </div>
+      <div>
+        <label>Target URL</label>
+        <input id="j-url" type="url" placeholder="https://your-app.com" />
+      </div>
+      <div>
+        <label>Tags (comma separated)</label>
+        <input id="j-tags" type="text" placeholder="smoke, auth, critical" />
+      </div>
+      <div>
+        <label>Steps (one per line — describe each action)</label>
+        <textarea id="j-steps" rows="6" placeholder="Navigate to homepage&#10;Click Sign Up button&#10;Fill in name, email and password&#10;Click Create Account&#10;Verify dashboard is visible"></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px;">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveJourney()">Create Journey</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Run Detail Modal -->
+<div class="modal-overlay" id="run-modal">
+  <div class="modal" style="width: 720px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <div style="font-size: 18px; font-weight: 800; color: white;" id="run-modal-title">Run Details</div>
+      <button onclick="closeRunModal()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div id="run-modal-content"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'REPLACE_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'REPLACE_SUPABASE_ANON_KEY';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentView = 'journeys';
+
+function scoreColor(s) {
+  if (!s && s !== 0) return '#64748b';
+  if (s >= 80) return '#4ade80';
+  if (s >= 60) return '#fbbf24';
+  return '#f87171';
+}
+
+function statusBadge(s) {
+  return `<span class="badge ${s}">${s.toUpperCase()}</span>`;
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event?.target?.closest('.nav-item')?.classList.add('active');
+  if (view === 'journeys') loadJourneys();
+  else if (view === 'runs') loadRuns();
+  else if (view === 'audits') loadAudits();
+  else if (view === 'reports') loadReports();
+}
+
+async function loadStats() {
+  const { data: runs } = await db.from('test_runs').select('status').order('started_at', { ascending: false }).limit(100);
+  const { data: journeys } = await db.from('journeys').select('id').eq('is_active', true);
+  const passed = runs?.filter(r => r.status === 'passed').length || 0;
+  const failed = runs?.filter(r => r.status === 'failed').length || 0;
+  const total = runs?.length || 0;
+  const passRate = total ? Math.round((passed / total) * 100) : 0;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="card"><div style="font-size:28px;font-weight:900;color:white">${journeys?.length || 0}</div><div style="font-size:12px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em">Active Journeys</div></div>
+    <div class="card"><div style="font-size:28px;font-weight:900;color:#4ade80">${passed}</div><div style="font-size:12px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em">Passed (last 100)</div></div>
+    <div class="card"><div style="font-size:28px;font-weight:900;color:#f87171">${failed}</div><div style="font-size:12px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em">Failed (last 100)</div></div>
+    <div class="card"><div style="font-size:28px;font-weight:900;color:${scoreColor(passRate)}">${passRate}%</div><div style="font-size:12px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em">Pass Rate</div></div>
+  `;
+
+  document.getElementById('run-count').textContent = `${total} runs this period`;
+}
+
+async function loadJourneys() {
+  document.getElementById('view-title').textContent = 'Journey Monitor';
+  document.getElementById('view-sub').textContent = 'All active journeys and their latest results';
+  document.getElementById('header-actions').innerHTML = `<button class="btn-primary" onclick="openNewJourneyModal()">+ New Journey</button>`;
+
+  const { data: outcomes } = await db.from('outcomes')
+    .select('*, journeys(name, goal, target_url, tags, updated_at), test_runs(commit_sha, started_at, branch, duration_ms)')
+    .order('created_at', { ascending: false });
+
+  const seen = new Set();
+  const latest = (outcomes || []).filter(o => {
+    if (!o.journey_id || seen.has(o.journey_id)) return false;
+    seen.add(o.journey_id); return true;
+  });
+
+  const { data: allJourneys } = await db.from('journeys').select('*').eq('is_active', true);
+  const untestedIds = (allJourneys || []).filter(j => !seen.has(j.id));
+
+  const content = document.getElementById('view-content');
+  content.innerHTML = '';
+
+  if (!latest.length && !untestedIds.length) {
+    content.innerHTML = `<div class="card" style="text-align:center;padding:60px;color:#334155">
+      <div style="font-size:40px;margin-bottom:16px">🚀</div>
+      <div style="font-size:18px;font-weight:700;color:#64748b;margin-bottom:8px">No journeys yet</div>
+      <div style="font-size:14px;color:#334155">Click "+ New Journey" to define your first test</div>
+    </div>`;
+    return;
+  }
+
+  latest.forEach(o => {
+    const j = o.journeys;
+    const r = o.test_runs;
+    const tags = (j?.tags || []).map(t => `<span style="font-size:10px;background:#1e293b;color:#94a3b8;padding:2px 8px;border-radius:20px;font-weight:600">${t}</span>`).join(' ');
+    const duration = r?.duration_ms ? `${(r.duration_ms / 1000).toFixed(1)}s` : '—';
+    const sha = r?.commit_sha ? r.commit_sha.slice(0, 7) : '—';
+
+    content.innerHTML += `
+    <div class="card" style="margin-bottom:12px;cursor:pointer;transition:border-color 0.15s;border-left:4px solid ${o.passed ? '#166534' : '#7f1d1d'}" onclick="loadRunsForJourney('${o.journey_id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:16px;font-weight:800;color:white">${j?.name || 'Unknown'}</span>
+            ${tags}
+          </div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:12px">${j?.goal || ''}</div>
+          <div style="display:flex;gap:20px;font-size:12px;color:#475569">
+            <span>${o.passed_steps}/${o.total_steps} steps</span>
+            ${o.healed_steps > 0 ? `<span style="color:#fb923c">⚡ ${o.healed_steps} self-healed</span>` : ''}
+            <span>${timeAgo(r?.started_at)}</span>
+            <span style="font-family:monospace">${sha}</span>
+            <span>${duration}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          ${statusBadge(o.passed ? 'passed' : 'failed')}
+          <span style="font-size:11px;color:#334155">${j?.target_url?.replace('https://','') || ''}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  untestedIds.forEach(j => {
+    content.innerHTML += `
+    <div class="card" style="margin-bottom:12px;border-left:4px solid #1e293b;opacity:0.6">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:white;margin-bottom:4px">${j.name}</div>
+          <div style="font-size:13px;color:#64748b">${j.goal}</div>
+        </div>
+        <span class="badge pending">PENDING FIRST RUN</span>
+      </div>
+    </div>`;
+  });
+}
+
+async function loadRunsForJourney(journeyId) {
+  document.getElementById('view-title').textContent = 'Run History';
+  document.getElementById('view-sub').textContent = 'All test runs for this journey';
+  document.getElementById('header-actions').innerHTML = `<button class="btn-secondary" onclick="loadJourneys()">← Back to Journeys</button>`;
+
+  const { data: runs } = await db.from('test_runs')
+    .select('*, outcomes(*)')
+    .eq('journey_id', journeyId)
+    .order('started_at', { ascending: false })
+    .limit(20);
+
+  const content = document.getElementById('view-content');
+  if (!runs?.length) { content.innerHTML = '<div class="card" style="color:#475569">No runs yet for this journey.</div>'; return; }
+
+  content.innerHTML = runs.map(r => {
+    const o = r.outcomes?.[0];
+    const dur = r.duration_ms ? `${(r.duration_ms/1000).toFixed(1)}s` : '—';
+    return `
+    <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openRunModal('${r.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            ${statusBadge(r.status)}
+            <span style="font-size:13px;font-family:monospace;color:#94a3b8">${r.commit_sha?.slice(0,7) || '—'}</span>
+            <span style="font-size:12px;color:#475569">${r.branch || 'main'}</span>
+          </div>
+          <div style="font-size:12px;color:#475569">
+            ${timeAgo(r.started_at)} · ${dur}
+            ${o ? ` · ${o.passed_steps}/${o.total_steps} steps · ${o.healed_steps || 0} healed` : ''}
+          </div>
+        </div>
+        <div style="font-size:12px;color:#334155">View details →</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadRuns() {
+  document.getElementById('view-title').textContent = 'Test Runs';
+  document.getElementById('view-sub').textContent = 'All recent runs across all journeys';
+  document.getElementById('header-actions').innerHTML = '';
+
+  const { data: runs } = await db.from('test_runs')
+    .select('*, journeys(name), outcomes(*)')
+    .order('started_at', { ascending: false })
+    .limit(50);
+
+  const content = document.getElementById('view-content');
+  if (!runs?.length) { content.innerHTML = '<div class="card" style="color:#475569">No runs yet. Push to GitHub to trigger your first run.</div>'; return; }
+
+  content.innerHTML = runs.map(r => {
+    const o = r.outcomes?.[0];
+    const dur = r.duration_ms ? `${(r.duration_ms/1000).toFixed(1)}s` : '—';
+    return `
+    <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openRunModal('${r.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            ${statusBadge(r.status)}
+            <span style="font-size:14px;font-weight:700;color:white">${r.journeys?.name || 'Unknown journey'}</span>
+          </div>
+          <div style="font-size:12px;color:#475569">
+            ${timeAgo(r.started_at)} · ${dur} · <span style="font-family:monospace">${r.commit_sha?.slice(0,7) || '—'}</span> · ${r.branch || 'main'}
+            ${o ? ` · ${o.passed_steps}/${o.total_steps} steps` : ''}
+            ${o?.healed_steps > 0 ? ` · <span style="color:#fb923c">⚡ ${o.healed_steps} healed</span>` : ''}
+          </div>
+        </div>
+        <span style="font-size:12px;color:#334155">View →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAudits() {
+  document.getElementById('view-title').textContent = 'Audit Reports';
+  document.getElementById('view-sub').textContent = 'Accessibility, performance, security and AI vision scores per run';
+  document.getElementById('header-actions').innerHTML = '';
+
+  const { data: audits } = await db.from('audit_results')
+    .select('*, journeys(name), test_runs(started_at, status)')
+    .order('created_at', { ascending: false })
+    .limit(60);
+
+  const byRun = {};
+  (audits || []).forEach(a => {
+    if (!byRun[a.run_id]) byRun[a.run_id] = { journey: a.journeys?.name, started_at: a.test_runs?.started_at, audits: [] };
+    byRun[a.run_id].audits.push(a);
+  });
+
+  const content = document.getElementById('view-content');
+  if (!Object.keys(byRun).length) { content.innerHTML = '<div class="card" style="color:#475569">No audit data yet.</div>'; return; }
+
+  content.innerHTML = Object.entries(byRun).map(([runId, row]) => {
+    const scores = row.audits.map(a => `
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:900;color:${scoreColor(a.score)}">${a.score ?? '—'}</div>
+        <div style="font-size:10px;color:#64748b;text-transform:capitalize;margin-top:2px">${a.audit_type.replace('_',' ')}</div>
+      </div>`).join('');
+
+    const aiAudit = row.audits.find(a => a.audit_type === 'ai_vision');
+    return `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:white;margin-bottom:3px">${row.journey || 'Unknown'}</div>
+          <div style="font-size:12px;color:#475569">${timeAgo(row.started_at)}</div>
+        </div>
+        <div style="display:flex;gap:20px">${scores}</div>
+      </div>
+      ${aiAudit?.ai_narrative ? `<div style="font-size:13px;color:#64748b;background:#0a0f1e;border-radius:10px;padding:12px;line-height:1.7">${aiAudit.ai_narrative}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function loadReports() {
+  document.getElementById('view-title').textContent = 'PDF Reports';
+  document.getElementById('view-sub').textContent = 'Downloadable audit reports for each test run';
+  document.getElementById('header-actions').innerHTML = '';
+
+  const { data: reports } = await db.from('reports')
+    .select('*, journeys(name), test_runs(started_at, status, commit_sha)')
+    .order('generated_at', { ascending: false })
+    .limit(30);
+
+  const content = document.getElementById('view-content');
+  if (!reports?.length) { content.innerHTML = '<div class="card" style="color:#475569">No reports generated yet. Reports are created after each run.</div>'; return; }
+
+  content.innerHTML = reports.map(r => `
+  <div class="card" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:white;margin-bottom:4px">${r.journeys?.name || 'Unknown'}</div>
+      <div style="font-size:12px;color:#475569">${timeAgo(r.generated_at)} · <span style="font-family:monospace">${r.test_runs?.commit_sha?.slice(0,7) || '—'}</span></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      ${r.html_url ? `<a href="${r.html_url}" target="_blank" class="btn-secondary" style="padding:7px 14px;font-size:12px;text-decoration:none">View HTML</a>` : ''}
+      ${r.report_url ? `<a href="${r.report_url}" target="_blank" class="btn-primary" style="padding:7px 14px;font-size:12px;text-decoration:none">Download PDF</a>` : '<span style="font-size:12px;color:#475569">PDF pending</span>'}
+    </div>
+  </div>`).join('');
+}
+
+async function openRunModal(runId) {
+  document.getElementById('run-modal').classList.add('open');
+  document.getElementById('run-modal-content').innerHTML = '<div style="color:#475569;text-align:center;padding:40px">Loading...</div>';
+
+  const { data: steps } = await db.from('step_results').select('*').eq('run_id', runId).order('step_index');
+  const { data: outcome } = await db.from('outcomes').select('*').eq('run_id', runId).single();
+  const { data: audits } = await db.from('audit_results').select('*').eq('run_id', runId);
+  const { data: report } = await db.from('reports').select('*').eq('run_id', runId).single();
+
+  if (outcome) {
+    document.getElementById('run-modal-title').textContent = outcome.passed ? '✅ Run Passed' : '❌ Run Failed';
+  }
+
+  const stepsHtml = (steps || []).map((s, i) => `
+  <div class="step-row">
+    <div class="step-dot" style="background:${s.status === 'passed' ? '#4ade80' : '#f87171'}"></div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:700;color:${s.status === 'passed' ? '#f1f5f9' : '#fca5a5'}">${s.step_description}</span>
+        ${s.heal_attempts > 0 ? `<span class="heal-tag">⚡ healed</span>` : ''}
+      </div>
+      ${s.ai_reasoning ? `<div style="font-size:12px;color:#64748b;font-style:italic;margin-bottom:4px">"${s.ai_reasoning}"</div>` : ''}
+      ${s.error_message ? `<div style="font-size:11px;color:#f87171;background:#1c0a0a;padding:5px 9px;border-radius:6px">${s.error_message}</div>` : ''}
+      ${s.screenshot_url ? `<img src="${s.screenshot_url}" style="width:100%;border-radius:8px;margin-top:8px;border:1px solid #1e293b" loading="lazy"/>` : ''}
+    </div>
+    <div style="font-size:11px;color:#334155;white-space:nowrap">${s.duration_ms || 0}ms</div>
+  </div>`).join('');
+
+  const auditHtml = (audits || []).map(a => `
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b">
+    <span style="font-size:13px;text-transform:capitalize;color:#94a3b8">${a.audit_type.replace('_',' ')}</span>
+    <span style="font-size:16px;font-weight:900;color:${scoreColor(a.score)}">${a.score ?? '—'}/100</span>
+  </div>`).join('');
+
+  document.getElementById('run-modal-content').innerHTML = `
+    ${outcome ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div style="background:#0a0f1e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:white">${outcome.passed_steps}/${outcome.total_steps}</div><div style="font-size:10px;color:#64748b;margin-top:3px">STEPS</div></div>
+      <div style="background:#0a0f1e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#f87171">${outcome.failed_steps}</div><div style="font-size:10px;color:#64748b;margin-top:3px">FAILED</div></div>
+      <div style="background:#0a0f1e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#fb923c">${outcome.healed_steps || 0}</div><div style="font-size:10px;color:#64748b;margin-top:3px">HEALED</div></div>
+      <div style="background:#0a0f1e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:${outcome.passed?'#4ade80':'#f87171'}">${outcome.passed?'PASS':'FAIL'}</div><div style="font-size:10px;color:#64748b;margin-top:3px">RESULT</div></div>
+    </div>` : ''}
+    ${outcome?.ai_summary ? `<div style="background:#0a0f1e;border-radius:10px;padding:14px;margin-bottom:20px;font-size:13px;color:#94a3b8;line-height:1.7">${outcome.ai_summary}</div>` : ''}
+    <div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Steps</div>
+    ${stepsHtml}
+    ${audits?.length ? `<div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin:20px 0 10px">Audit Scores</div>${auditHtml}` : ''}
+    ${report ? `<div style="display:flex;gap:8px;margin-top:20px">
+      ${report.html_url ? `<a href="${report.html_url}" target="_blank" class="btn-secondary" style="text-decoration:none;font-size:13px">View Full Report</a>` : ''}
+      ${report.report_url ? `<a href="${report.report_url}" target="_blank" class="btn-primary" style="text-decoration:none;font-size:13px">Download PDF</a>` : ''}
+    </div>` : ''}
+  `;
+}
+
+function closeRunModal() { document.getElementById('run-modal').classList.remove('open'); }
+
+function openNewJourneyModal() { document.getElementById('journey-modal').classList.add('open'); }
+function closeModal() { document.getElementById('journey-modal').classList.remove('open'); }
+
+async function saveJourney() {
+  const name = document.getElementById('j-name').value.trim();
+  const goal = document.getElementById('j-goal').value.trim();
+  const url = document.getElementById('j-url').value.trim();
+  const tagsRaw = document.getElementById('j-tags').value.trim();
+  const stepsRaw = document.getElementById('j-steps').value.trim();
+
+  if (!name || !goal || !url) return alert('Name, goal and URL are required.');
+
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const steps = stepsRaw.split('\n').filter(s => s.trim()).map((s, i) => ({
+    action: 'ai_decide',
+    description: s.trim(),
+    index: i
+  }));
+
+  const { data: customer } = await db.from('customers').select('id').limit(1).single();
+  const { error } = await db.from('journeys').insert({
+    customer_id: customer?.id,
+    name, goal,
+    target_url: url,
+    steps,
+    tags,
+    is_active: true
+  });
+
+  if (error) return alert('Error: ' + error.message);
+  closeModal();
+  loadJourneys();
+}
+
+// Init
+loadStats();
+loadJourneys();
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>
