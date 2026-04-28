@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Klaro Pulse | Internal Ops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-black text-slate-300 p-8 font-mono">
+    <div id="auth-gate" class="max-w-md mx-auto mt-20 p-8 bg-slate-900 rounded-xl border border-slate-800">
+        <h2 class="text-white mb-4 font-bold">Klaro Ops Access</h2>
+        <input type="password" id="passkey" placeholder="Enter Ops Key" class="w-full p-2 bg-black border border-slate-700 rounded mb-4 text-white">
+        <button onclick="unlock()" class="w-full py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-500">Unlock Dashboard</button>
+    </div>
+
+    <div id="dashboard" class="hidden max-w-5xl mx-auto">
+        <h1 class="text-2xl font-bold text-white mb-8 border-b border-slate-800 pb-4">Live Pulse Intelligence</h1>
+        <div id="logs-container" class="space-y-6"></div>
+    </div>
+
+    <script>
+        async function unlock() {
+            const key = document.getElementById('passkey').value;
+            // You define this key! For MVP, we use the Supabase Anon Key as the 'password'
+            const SUPABASE_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
+            
+            try {
+                const supabaseClient = supabase.createClient(SUPABASE_URL, key);
+                const { data, error } = await supabaseClient.from('pulse_logs').select('*').limit(1);
+                
+                if (error) throw error;
+
+                document.getElementById('auth-gate').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                loadData(supabaseClient);
+            } catch (e) {
+                alert("Access Denied: Invalid Key");
+            }
+        }
+
+        async function loadData(client) {
+            const { data } = await client.from('pulse_logs').select('*').order('created_at', { ascending: false }).limit(10);
+            document.getElementById('logs-container').innerHTML = data.map(log => `
+                <div class="bg-slate-900 p-6 rounded border border-slate-800">
+                    <div class="flex justify-between text-[10px] uppercase tracking-widest text-slate-500 mb-2">
+                        <span>${log.url}</span>
+                        <span>${new Date(log.created_at).toLocaleString()}</span>
+                    </div>
+                    <div class="text-white text-sm whitespace-pre-wrap">${log.reasoning}</div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
