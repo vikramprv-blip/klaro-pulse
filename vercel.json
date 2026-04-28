@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/klaro-pulse/:path*",
+      "destination": "https://klaro-pulse-YOUR-VERCEL-ID.vercel.app/:path*"
+    }
+  ]
+}
