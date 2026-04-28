@@ -1,0 +1,29 @@
+name: Klaro Pulse - Continuous Audit
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Hourly heartbeat
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build and Run Pulse Agent
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          KLARO_URL: ${{ secrets.KLARO_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          docker build -t pulse -f docker/Dockerfile .
+          docker run \
+            -e GROQ_API_KEY \
+            -e KLARO_URL \
+            -e SUPABASE_URL \
+            -e SUPABASE_SERVICE_ROLE_KEY \
+            pulse
