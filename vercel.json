@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/klaro-pulse/:path*",
-      "destination": "https://klaro-pulse.vercel.app/:path*"
-    }
+    { "source": "/ops", "destination": "/ops.html" }
   ]
 }
