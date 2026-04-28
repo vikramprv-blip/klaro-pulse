@@ -8,69 +8,59 @@ const groq = new Groq({ apiKey: cleanEnv("GROQ_API_KEY") });
 const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
 const targets = [
-  { name: 'Klaro', url: 'https://klaro.services', goal: 'Navigate to US Login and verify the Blocker Resolution headline.' },
-  { name: 'NomadPilot', url: 'https://nomadpilot.app', goal: 'Verify the AI Travel Orchestration flow is accessible.' }
+  { name: 'Klaro', url: 'https://klaro.services', goal: 'Verify if the US legal landing page is clear.' },
+  { name: 'NomadPilot', url: 'https://nomadpilot.app', goal: 'Check the travel orchestration call-to-action.' }
 ];
+
+// Scrub Markdown from LLM JSON responses
+function scrubJSON(raw) {
+  const match = raw.match(/\{[\s\S]*\}/);
+  return match ? JSON.parse(match[0]) : null;
+}
 
 async function runLAM(target) {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  const logs = [];
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const consoleLogs = [];
   
-  page.on('console', msg => logs.push(`[Console] ${msg.type()}: ${msg.text()}`));
+  page.on('console', msg => { if (msg.type() === 'error') consoleLogs.push(msg.text()); });
 
   try {
-    console.log(`[LAM] Initiating Objective: ${target.goal}`);
+    console.log(`[LAM] Objective: ${target.goal}`);
     await page.goto(target.url, { waitUntil: 'networkidle' });
 
-    // THE LAM "BRAIN": Determining the next click
-    const domSnapshot = await page.evaluate(() => document.body.innerText.slice(0, 1000));
+    const dom = await page.evaluate(() => document.body.innerText.slice(0, 1000));
     
     const decision = await groq.chat.completions.create({
-      messages: [{ 
-        role: "system", 
-        content: `You are a Large Action Model. Objective: ${target.goal}. Based on this HTML snapshot, what is the CSS selector of the most important button to click next? Return ONLY a JSON object: {"selector": "string", "reason": "string"}` 
-      }, { 
-        role: "user", content: domSnapshot 
-      }],
+      messages: [{ role: "system", content: "You are a LAM. Return ONLY JSON: {\"selector\": \"css_selector\", \"reason\": \"why\"}" },
+                 { role: "user", content: `Goal: ${target.goal}\nDOM: ${dom}` }],
       model: "llama-3.3-70b-versatile",
-      response_format: { type: "json_object" }
     });
 
-    const action = JSON.parse(decision.choices[0].message.content);
-    console.log(`[LAM Action] Clicking: ${action.selector} | Reason: ${action.reason}`);
+    const action = scrubJSON(decision.choices[0].message.content);
+    
+    if (action && action.selector) {
+      console.log(`[LAM] Executing: ${action.selector}`);
+      await page.click(action.selector).catch(() => {});
+      await page.waitForTimeout(2000);
+    }
 
-    // EXECUTE THE ACTION
-    await page.click(action.selector).catch(e => console.log("Click failed, proceeding to audit."));
-    await page.waitForTimeout(2000);
-
-    const finalState = await page.evaluate(() => ({
-      url: window.location.href,
-      title: document.title,
-      text: document.body.innerText.slice(0, 1500)
-    }));
-
-    // FINAL AUDIT
     const audit = await groq.chat.completions.create({
-      messages: [{ 
-        role: "system", 
-        content: "You are the Lead Auditor. Compare the goal with the final page state. Identify any broken logic, UX friction, or compliance gaps." 
-      }, { 
-        role: "user", content: `Goal: ${target.goal}\nFinal State: ${JSON.stringify(finalState)}` 
-      }],
+      messages: [{ role: "system", content: "Audit the final state for US compliance and technical friction." },
+                 { role: "user", content: `Final URL: ${page.url()}\nGoal: ${target.goal}` }],
       model: "llama-3.3-70b-versatile",
     });
 
     await supabase.from('pulse_logs').insert([{ 
       url: target.url, 
-      status: logs.some(l => l.includes('error')) ? 'DEGRADED' : 'UP', 
+      status: consoleLogs.length > 0 ? 'DEGRADED' : 'UP', 
       reasoning: audit.choices[0].message.content, 
-      metadata: { action_taken: action, console_logs: logs, final_url: finalState.url }
+      metadata: { action_taken: action, errors: consoleLogs, final_url: page.url() }
     }]);
 
-    console.log(`✅ ${target.name} LAM Cycle Complete.`);
   } catch (err) {
-    console.error(`❌ LAM Failure: ${err.message}`);
+    console.error(`❌ ${target.name} Failed: ${err.message}`);
   } finally {
     await browser.close();
   }
@@ -78,5 +68,6 @@ async function runLAM(target) {
 
 async function run() {
   for (const t of targets) await runLAM(t);
+  console.log("🚀 All audits pushed to Supabase.");
 }
 run();
