@@ -4,32 +4,27 @@ const { createClient } = require("@supabase/supabase-js");
 const dns = require("node:dns");
 require("dotenv").config();
 
-// FORCE IPv4 for older Mac Docker bridges
 dns.setDefaultResultOrder("ipv4first");
 
-// Clean whitespace/quotes from env vars
 const cleanEnv = (key) => (process.env[key] || "").replace(/['"]+/g, "").trim();
+const groq = new Groq({ apiKey: cleanEnv("GROQ_API_KEY") });
+const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
-const supabaseUrl = cleanEnv("SUPABASE_URL");
-const supabaseKey = cleanEnv("SUPABASE_SERVICE_ROLE_KEY");
-const groqKey = cleanEnv("GROQ_API_KEY");
-const klaroUrl = cleanEnv("KLARO_URL");
+const targets = [
+  { name: 'Klaro', url: 'https://klaro.services', region: 'US' },
+  { name: 'NomadPilot', url: 'https://nomadpilot.app', region: 'Global' }
+];
 
-const groq = new Groq({ apiKey: groqKey });
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-async function runPulse() {
-  console.log(`[Pulse] Bridge Active. Target: ${klaroUrl}`);
-  
+async function runAudit(target) {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   const startTime = Date.now();
 
   try {
-    await page.goto(klaroUrl, { waitUntil: 'networkidle' });
+    console.log(`[Pulse] Auditing ${target.name}...`);
+    await page.goto(target.url, { waitUntil: 'networkidle' });
     
-    // Check if we need to click US
-    if (page.url().includes("klaro.services") && !page.url().includes("/us")) {
+    if (target.name === 'Klaro' && !page.url().includes("/us")) {
        try { await page.click('text=US', { timeout: 3000 }); } catch(e) {}
     }
 
@@ -41,7 +36,7 @@ async function runPulse() {
 
     const analysis = await groq.chat.completions.create({
       messages: [
-        { role: "system", content: "You are Klaro Pulse. Audit for US Lawyers/Accountants. Focus on 'Blocker' resolution clarity." },
+        { role: "system", content: `You are Klaro Pulse auditing ${target.name}. Focus on ${target.region} market standards and blocker clarity.` },
         { role: "user", content: `Content: ${pageData.content}` }
       ],
       model: "llama-3.3-70b-versatile",
@@ -50,26 +45,25 @@ async function runPulse() {
     const reasoning = analysis.choices[0].message.content;
     const latency = Date.now() - startTime;
 
-    console.log(`[Pulse Reasoning]: ${reasoning.slice(0, 150)}...`);
-
-    console.log(`[Pulse] Attempting Supabase sync to: ${supabaseUrl}`);
-    
-    const { error } = await supabase.from('pulse_logs').insert([{ 
+    await supabase.from('pulse_logs').insert([{ 
       url: pageData.url, 
       status: pageData.hasLogin ? 'UP' : 'DEGRADED', 
       reasoning: reasoning, 
       latency_ms: latency,
-      region: 'US'
+      region: target.region
     }]);
 
-    if (error) throw error;
-    console.log("✅ Pulse Success: Data synced to Supabase.");
-
+    console.log(`✅ ${target.name} Audit Saved.`);
   } catch (err) {
-    console.error(`❌ Pulse Error: ${err.message}`);
-    if (err.stack) console.error(err.stack);
+    console.error(`❌ ${target.name} Error: ${err.message}`);
   } finally {
     await browser.close();
+  }
+}
+
+async function runPulse() {
+  for (const target of targets) {
+    await runAudit(target);
   }
 }
 
