@@ -1,4 +1,8 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false
+  "rewrites": [
+    {
+      "source": "/klaro-pulse/:path*",
+      "destination": "https://klaro-pulse.vercel.app/:path*"
+    }
+  ]
 }
