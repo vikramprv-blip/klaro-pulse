@@ -1,0 +1,26 @@
+name: Klaro Pulse — Run Journeys
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  run-pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Pulse engine
+        run: docker build -t klaro-pulse-engine -f engine/Dockerfile .
+
+      - name: Run journeys
+        run: |
+          docker run --rm \
+            -e SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            -e SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }} \
+            -e GITHUB_SHA=${{ github.sha }} \
+            klaro-pulse-engine
