@@ -5,7 +5,6 @@ const dns = require("node:dns");
 require("dotenv").config();
 
 dns.setDefaultResultOrder("ipv4first");
-
 const cleanEnv = (key) => (process.env[key] || "").replace(/['"]+/g, "").trim();
 const groq = new Groq({ apiKey: cleanEnv("GROQ_API_KEY") });
 const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVICE_ROLE_KEY"));
@@ -15,56 +14,74 @@ const targets = [
   { name: 'NomadPilot', url: 'https://nomadpilot.app', region: 'Global' }
 ];
 
-async function runAudit(target) {
+async function deepAudit(target) {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  const startTime = Date.now();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  
+  const auditData = {
+    brokenLinks: [],
+    consoleErrors: [],
+    performance: 0,
+    startTime: Date.now()
+  };
+
+  // Listen for Console Errors (Broken Code)
+  page.on('console', msg => {
+    if (msg.type() === 'error') auditData.consoleErrors.push(msg.text());
+  });
 
   try {
-    console.log(`[Pulse] Auditing ${target.name}...`);
+    console.log(`[Deep Audit] Scanning ${target.name}...`);
     await page.goto(target.url, { waitUntil: 'networkidle' });
-    
-    if (target.name === 'Klaro' && !page.url().includes("/us")) {
-       try { await page.click('text=US', { timeout: 3000 }); } catch(e) {}
+
+    // 1. Find all internal links
+    const links = await page.evaluate(() => 
+      Array.from(document.querySelectorAll('a')).map(a => a.href)
+           .filter(href => href.startsWith(window.location.origin))
+    );
+
+    // 2. Check for Broken Links
+    for (const link of links.slice(0, 5)) { // Limit to 5 for MVP speed
+      const response = await page.request.get(link);
+      if (response.status() >= 400) auditData.brokenLinks.push({ link, status: response.status() });
     }
 
-    const pageData = await page.evaluate(() => ({
-      url: window.location.href,
-      content: document.body.innerText.slice(0, 2000),
-      hasLogin: !!document.querySelector('input[type="email"]') || document.body.innerText.includes("Sign In")
-    }));
+    const content = await page.innerText('body');
+    const latency = Date.now() - auditData.startTime;
 
+    // 3. AI Analysis of "Broken" UX/Compliance
     const analysis = await groq.chat.completions.create({
       messages: [
-        { role: "system", content: `You are Klaro Pulse auditing ${target.name}. Focus on ${target.region} market standards and blocker clarity.` },
-        { role: "user", content: `Content: ${pageData.content}` }
+        { role: "system", content: `Analyze this site for US Legal/Tax compliance and technical friction. Errors found: ${auditData.consoleErrors.join(', ')}. Broken Links: ${JSON.stringify(auditData.brokenLinks)}` },
+        { role: "user", content: `Content: ${content.slice(0, 2000)}` }
       ],
       model: "llama-3.3-70b-versatile",
     });
 
-    const reasoning = analysis.choices[0].message.content;
-    const latency = Date.now() - startTime;
-
+    // 4. Save COMPREHENSIVE Data
     await supabase.from('pulse_logs').insert([{ 
-      url: pageData.url, 
-      status: pageData.hasLogin ? 'UP' : 'DEGRADED', 
-      reasoning: reasoning, 
+      url: target.url, 
+      status: auditData.brokenLinks.length > 0 || auditData.consoleErrors.length > 0 ? 'DEGRADED' : 'UP', 
+      reasoning: analysis.choices[0].message.content, 
       latency_ms: latency,
-      region: target.region
+      region: target.region,
+      metadata: { // Add this column in Supabase
+        errors: auditData.consoleErrors,
+        broken_links: auditData.brokenLinks,
+        pages_scanned: links.length
+      }
     }]);
 
-    console.log(`✅ ${target.name} Audit Saved.`);
+    console.log(`✅ ${target.name} Deep Audit Complete.`);
   } catch (err) {
-    console.error(`❌ ${target.name} Error: ${err.message}`);
+    console.error(`❌ Audit Failed: ${err.message}`);
   } finally {
     await browser.close();
   }
 }
 
-async function runPulse() {
-  for (const target of targets) {
-    await runAudit(target);
-  }
+async function run() {
+  for (const t of targets) await deepAudit(t);
 }
-
-runPulse();
+run();
