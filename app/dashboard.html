@@ -116,6 +116,7 @@ label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase
           <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('signup')">Sign Up</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('checkout')">Checkout</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('audit')">Full Site Audit</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('nomadpilot')">NomadPilot Demo</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -147,7 +148,8 @@ const TEMPLATES = {
   login: { name: 'User Login Flow', goal: 'Verify a user can log in with valid credentials and reach their dashboard', steps: 'Navigate to the homepage\nClick the Sign In or Login button\nType the test email into the email field\nType the password into the password field\nClick the Submit or Login button\nVerify the dashboard or account page is visible' },
   signup: { name: 'User Sign Up Flow', goal: 'Verify a new user can create an account and reach onboarding', steps: 'Navigate to the homepage\nClick the Sign Up or Get Started button\nFill in the name field\nFill in the email field\nFill in the password field\nClick the Create Account button\nVerify the confirmation or welcome screen appears' },
   checkout: { name: 'Checkout Flow', goal: 'Verify a user can add a product to cart and reach the payment step', steps: 'Navigate to the products page\nClick on the first product\nClick the Add to Cart button\nVerify the cart shows 1 item\nClick the Checkout button\nVerify the payment form is visible' },
-  audit: { name: 'Full Site Audit', goal: 'Audit all key public pages for accessibility, performance, security and UX quality', steps: 'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nTake a screenshot of the signup or contact page\nVerify no error messages are visible' }
+  audit: { name: 'Full Site Audit', goal: 'Audit all key public pages for accessibility, performance, security and UX quality', steps: 'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nTake a screenshot of the signup or contact page\nVerify no error messages are visible' },
+  nomadpilot: { name: 'NomadPilot Full Audit', goal: 'Audit all public pages of nomadpilot.app for accessibility, performance, security and UX quality', steps: 'Navigate to https://nomadpilot.app and wait for the homepage to load\nTake a screenshot of the full homepage\nVerify the main heading and hero section are visible\nScroll down to see the features section\nClick the Pricing link in the navigation\nTake a screenshot of the pricing page\nClick the Sign Up or Get Started button\nVerify the signup page is visible\nTake a screenshot of the signup flow' }
 };
 
 function scoreColor(s) {
@@ -275,7 +277,10 @@ async function loadJourneys() {
           <div style="flex-shrink:0;text-align:right">
             ${badge(o.passed ? 'passed' : 'failed')}
             <div style="font-size:11px;color:#334155;margin-top:6px">${(o.passed_steps||0)}/${(o.total_steps||0)} steps</div>
-            <div style="font-size:11px;color:#475569;margin-top:3px">Tap to view →</div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button onclick="event.stopPropagation();openEditModal('${j.id}','${j.name.replace(/'/g,\"\\'\")}','${j.goal.replace(/'/g,\"\\'\")}','${j.target_url}')" style="font-size:10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              <span style="font-size:11px;color:#475569;margin-top:2px">View →</span>
+            </div>
           </div>
         </div>
       </div>`;
@@ -489,6 +494,58 @@ loadStats();
 loadJourneys();
 setInterval(loadStats, 30000);
 </script>
+
+<!-- Edit Journey Modal -->
+<div class="modal-bg" id="eModal">
+  <div class="modal" style="width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;color:white">Edit Journey</div>
+      <button onclick="closeModal('eModal')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <input type="hidden" id="e-id"/>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><label>Journey Name</label><input id="e-name"/></div>
+      <div><label>Goal</label><textarea id="e-goal" rows="2"></textarea></div>
+      <div><label>Target URL</label><input id="e-url" type="url"/></div>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px">
+        <button class="btn btn-ghost" style="color:#f87171;border-color:#7f1d1d" onclick="deleteJourney()">Delete Journey</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="closeModal('eModal')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEditModal(id, name, goal, url) {
+  document.getElementById('e-id').value = id;
+  document.getElementById('e-name').value = name;
+  document.getElementById('e-goal').value = goal;
+  document.getElementById('e-url').value = url;
+  document.getElementById('eModal').classList.add('open');
+}
+async function saveEdit() {
+  const id = document.getElementById('e-id').value;
+  const name = document.getElementById('e-name').value.trim();
+  const goal = document.getElementById('e-goal').value.trim();
+  const url  = document.getElementById('e-url').value.trim();
+  if (!name||!goal||!url) return alert('All fields required');
+  const { error } = await db.from('journeys').update({ name, goal, target_url: url, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) return alert('Error: '+error.message);
+  closeModal('eModal');
+  loadJourneys();
+}
+async function deleteJourney() {
+  if (!confirm('Delete this journey? This cannot be undone.')) return;
+  const id = document.getElementById('e-id').value;
+  await db.from('journeys').update({ is_active: false }).eq('id', id);
+  closeModal('eModal');
+  loadJourneys();
+}
+</script>
+
 </body>
 </html>
 <script>
