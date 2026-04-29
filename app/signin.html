@@ -44,7 +44,7 @@ async function signin(){
   btn.disabled=true; btn.textContent='Signing in...'; err.style.display='none';
   const {error}=await db.auth.signInWithPassword({email:document.getElementById('email').value,password:document.getElementById('pass').value});
   if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Sign In';return;}
-  window.location.href='/app/dashboard.html';
+  window.location.href='/dashboard';
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter')signin();});
 </script>

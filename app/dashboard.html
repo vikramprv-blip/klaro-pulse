@@ -8,63 +8,84 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
-.sidebar{width:220px;min-height:100vh;background:#161b27;border-right:1px solid #2d3748;position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:10}
+body{font-family:'Inter',sans-serif;background:#080c14;color:#e2e8f0;min-height:100vh}
+#auth-guard{display:none;position:fixed;inset:0;background:#080c14;z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#auth-guard.show{display:flex}
+.sidebar{width:220px;min-height:100vh;background:#0f1420;border-right:1px solid #1e2a3a;position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:10}
 .main{margin-left:220px;padding:32px 36px;min-height:100vh}
-.logo-area{padding:20px 18px 16px}
+.logo-area{padding:20px 18px 16px;border-bottom:1px solid #1e2a3a}
 .logo{font-size:17px;font-weight:900;color:white;letter-spacing:-0.5px}
-.logo span{color:#7c3aed}
-.logo-sub{font-size:9px;color:#4b5563;margin-top:1px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
-nav{padding:6px 0;flex:1}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;color:#9ca3af;cursor:pointer;border-radius:8px;margin:2px 8px;transition:all 0.15s;text-decoration:none}
-.nav-item:hover{background:#1e2535;color:#e2e8f0}
-.nav-item.active{background:#1e2535;color:#a78bfa}
-.nav-item svg{flex-shrink:0}
-.plan-box{margin:12px;background:#0d1117;border:1px solid #2d3748;border-radius:10px;padding:12px}
-.plan-label{font-size:9px;color:#374151;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px}
-.plan-name{font-size:13px;font-weight:800;color:#7c3aed}
-.plan-usage{font-size:10px;color:#374151;margin-top:6px}
-.card{background:#161b27;border:1px solid #2d3748;border-radius:14px;padding:20px}
-.stat-card{background:#161b27;border:1px solid #2d3748;border-radius:12px;padding:18px}
-.stat-val{font-size:28px;font-weight:900}
-.stat-label{font-size:10px;color:#6b7280;margin-top:3px;text-transform:uppercase;letter-spacing:0.05em}
+.logo span{color:#818cf8}
+.logo-sub{font-size:9px;color:#334155;margin-top:2px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase}
+nav{padding:10px 0;flex:1}
+.nav-section{font-size:9px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.1em;padding:8px 20px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:13px;color:#64748b;cursor:pointer;border-radius:8px;margin:1px 8px;transition:all 0.15s;text-decoration:none}
+.nav-item:hover{background:#1a2535;color:#cbd5e1}
+.nav-item.active{background:#1e2d4a;color:#818cf8;font-weight:600}
+.nav-item svg{flex-shrink:0;opacity:0.7}
+.nav-item.active svg{opacity:1}
+.sidebar-footer{padding:12px}
+.plan-box{background:#0a1120;border:1px solid #1e2a3a;border-radius:12px;padding:14px}
+.plan-label{font-size:9px;color:#334155;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.plan-name{font-size:13px;font-weight:800;color:#818cf8}
+.plan-usage{font-size:11px;color:#475569;margin-top:6px}
+.user-row{display:flex;align-items:center;gap:8px;padding:10px 14px;margin:4px 8px;border-radius:8px;background:#0a1120;border:1px solid #1e2a3a}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;flex-shrink:0}
+.user-email{font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.logout-btn{font-size:10px;color:#475569;cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid #1e2a3a;background:none;font-family:'Inter',sans-serif}
+.logout-btn:hover{color:#f87171;border-color:#7f1d1d;background:#1c0505}
+.card{background:#0f1420;border:1px solid #1e2a3a;border-radius:14px;padding:20px}
+.stat-card{background:#0f1420;border:1px solid #1e2a3a;border-radius:14px;padding:20px;transition:border-color 0.2s}
+.stat-card:hover{border-color:#334155}
+.stat-val{font-size:30px;font-weight:900;letter-spacing:-0.5px}
+.stat-label{font-size:10px;color:#475569;margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600}
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.04em}
-.badge.passed{background:#052e16;color:#4ade80;border:1px solid #14532d}
-.badge.failed{background:#1c0505;color:#f87171;border:1px solid #7f1d1d}
-.badge.running{background:#1c1505;color:#fbbf24;border:1px solid #78350f}
-.badge.pending{background:#111827;color:#6b7280;border:1px solid #1f2937}
-.section-label{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
-.journey-card{background:#161b27;border:1px solid #2d3748;border-radius:12px;padding:18px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
-.journey-card:hover{border-color:#4b5563}
-.journey-card.passed{border-left:3px solid #14532d}
-.journey-card.failed{border-left:3px solid #7f1d1d}
-.journey-card.pending{border-left:3px solid #2d3748}
-.step-item{padding:11px 0;border-bottom:1px solid #1f2937;display:flex;gap:10px;align-items:flex-start}
+.badge.passed{background:#052e16;color:#4ade80;border:1px solid #166534}
+.badge.failed{background:#1c0505;color:#f87171;border:1px solid #991b1b}
+.badge.running{background:#1c1505;color:#fbbf24;border:1px solid #92400e}
+.badge.pending{background:#111827;color:#475569;border:1px solid #1e2a3a}
+.journey-card{background:#0f1420;border:1px solid #1e2a3a;border-radius:12px;padding:18px;margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.journey-card:hover{border-color:#334155;background:#111827}
+.journey-card.passed{border-left:3px solid #166534}
+.journey-card.failed{border-left:3px solid #991b1b}
+.journey-card.pending{border-left:3px solid #1e2a3a}
+.step-item{padding:11px 0;border-bottom:1px solid #0f1720;display:flex;gap:10px;align-items:flex-start}
 .step-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
-.audit-score{background:#0d1117;border-radius:10px;padding:12px;text-align:center}
+.audit-score{background:#080c14;border:1px solid #1e2a3a;border-radius:10px;padding:12px;text-align:center}
 .audit-score-val{font-size:22px;font-weight:900}
-.audit-score-label{font-size:9px;color:#6b7280;text-transform:uppercase;margin-top:2px}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:50;align-items:center;justify-content:center}
+.audit-score-label{font-size:9px;color:#475569;text-transform:uppercase;margin-top:3px;letter-spacing:0.06em;font-weight:600}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:50;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
-.modal{background:#161b27;border:1px solid #2d3748;border-radius:18px;width:620px;max-height:85vh;overflow-y:auto;padding:28px}
-input,select,textarea{background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color 0.15s}
-input:focus,textarea:focus{border-color:#7c3aed}
-label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px}
+.modal{background:#0f1420;border:1px solid #1e2a3a;border-radius:18px;width:620px;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}
+input,select,textarea{background:#080c14;border:1px solid #1e2a3a;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color 0.15s}
+input:focus,textarea:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+label{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px}
 .btn{padding:9px 18px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;transition:all 0.15s}
-.btn-primary{background:#7c3aed;color:white}
-.btn-primary:hover{background:#6d28d9}
-.btn-ghost{background:transparent;color:#9ca3af;border:1px solid #2d3748}
-.btn-ghost:hover{background:#1e2535;color:#e2e8f0}
-.btn-danger{background:transparent;color:#f87171;border:1px solid #7f1d1d}
-.btn-danger:hover{background:#1c0505}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+.btn-primary:hover{background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 4px 16px rgba(99,102,241,0.4)}
+.btn-ghost{background:transparent;color:#64748b;border:1px solid #1e2a3a}
+.btn-ghost:hover{background:#1a2535;color:#cbd5e1;border-color:#334155}
+.btn-danger{background:transparent;color:#f87171;border:1px solid #991b1b}
+.btn-danger:hover{background:#1c0505;border-color:#f87171}
 .hdr-actions{display:flex;gap:8px}
-.empty-state{text-align:center;padding:60px 20px;color:#4b5563}
-.empty-icon{font-size:40px;margin-bottom:12px}
-.empty-title{font-size:16px;font-weight:700;color:#6b7280;margin-bottom:6px}
-.empty-sub{font-size:13px}
+.empty-state{text-align:center;padding:80px 20px;color:#334155}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:0.6}
+.empty-title{font-size:16px;font-weight:700;color:#475569;margin-bottom:8px}
+.empty-sub{font-size:13px;color:#334155}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.page-title{font-size:22px;font-weight:900;color:white;letter-spacing:-0.3px}
+.page-sub{font-size:12px;color:#334155;margin-top:3px;font-weight:500}
+.tag{font-size:10px;background:#1e2a3a;color:#475569;padding:2px 8px;border-radius:20px;font-weight:600}
+.score-ring{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
 </style>
 </head>
 <body>
+
+<!-- Auth guard overlay -->
+<div id="auth-guard">
+  <div style="font-size:18px;font-weight:900;color:white;letter-spacing:-0.5px">KLARO <span style="color:#818cf8">PULSE</span></div>
+  <div style="font-size:13px;color:#475569" id="auth-msg">Checking session...</div>
+</div>
 
 <div class="sidebar">
   <div class="logo-area">
@@ -72,6 +93,7 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
     <div class="logo-sub">AI QA Platform</div>
   </div>
   <nav>
+    <div class="nav-section">Testing</div>
     <a class="nav-item active" onclick="showView('journeys',this)">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
       Journeys
@@ -80,6 +102,7 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Test Runs
     </a>
+    <div class="nav-section">Analytics</div>
     <a class="nav-item" onclick="showView('audits',this)">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10"/></svg>
       Audit Scores
@@ -89,25 +112,31 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
       Reports
     </a>
   </nav>
-  <div class="plan-box">
-    <div class="plan-label">Plan</div>
-    <div class="plan-name">Growth · $499/mo</div>
-    <div class="plan-usage" id="usage-label">Loading...</div>
+  <div class="sidebar-footer">
+    <div class="user-row" id="user-row">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-email" id="user-email">Loading...</div>
+      <button class="logout-btn" onclick="logout()">Out</button>
+    </div>
+    <div class="plan-box" style="margin-top:8px">
+      <div class="plan-label">Plan</div>
+      <div class="plan-name">Growth · $499/mo</div>
+      <div class="plan-usage" id="usage-label">Loading...</div>
+    </div>
   </div>
 </div>
 
 <div class="main">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+  <div class="page-header">
     <div>
-      <h1 style="font-size:22px;font-weight:900;color:white" id="view-title">Journey Monitor</h1>
-      <p style="font-size:12px;color:#4b5563;margin-top:2px" id="view-sub">All active journeys — latest AI run results</p>
+      <div class="page-title" id="view-title">Journey Monitor</div>
+      <div class="page-sub" id="view-sub">All active journeys — latest AI run results</div>
     </div>
     <div class="hdr-actions" id="hdr-actions">
       <button class="btn btn-ghost" id="run-btn" onclick="triggerRun()">▶ Run All Now</button>
       <button class="btn btn-primary" onclick="openNewJourney()">+ New Journey</button>
     </div>
   </div>
-
   <div id="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px"></div>
   <div id="view-content"></div>
 </div>
@@ -115,9 +144,12 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
 <!-- New Journey Modal -->
 <div class="modal-bg" id="jModal">
   <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="font-size:17px;font-weight:800;color:white">Define New Journey</div>
-      <button onclick="closeModal('jModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:white">Define New Journey</div>
+        <div style="font-size:12px;color:#475569;margin-top:2px">Describe steps in plain English — AI handles the rest</div>
+      </div>
+      <button onclick="closeModal('jModal')" style="background:#1e2a3a;border:none;color:#64748b;cursor:pointer;font-size:16px;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <div><label>Journey Name</label><input id="j-name" placeholder="e.g. User Login Flow"/></div>
@@ -126,17 +158,16 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
       <div><label>Tags (comma separated)</label><input id="j-tags" placeholder="smoke, auth, critical"/></div>
       <div>
         <label>Steps — one per line</label>
-        <div style="font-size:11px;color:#4b5563;margin-bottom:6px">Describe each action as you would tell a human tester. AI figures out the rest.</div>
-        <textarea id="j-steps" rows="6" placeholder="Navigate to the homepage&#10;Click the Sign In button&#10;Enter email into the email field&#10;Enter password into the password field&#10;Click Login&#10;Verify the dashboard is visible"></textarea>
+        <div style="font-size:11px;color:#334155;margin-bottom:6px">Describe each action as you would tell a human tester.</div>
+        <textarea id="j-steps" rows="6" placeholder="Navigate to the homepage&#10;Click the Sign In button&#10;Enter email into the email field&#10;Enter password&#10;Click Login&#10;Verify the dashboard is visible"></textarea>
       </div>
-      <div style="background:#0d1117;border-radius:10px;padding:14px">
-        <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Quick Templates</div>
+      <div style="background:#080c14;border:1px solid #1e2a3a;border-radius:10px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:#6366f1;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">Quick Templates</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('login')">Login Flow</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('signup')">Sign Up</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('checkout')">Checkout</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('audit')">Full Site Audit</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('nomadpilot')">NomadPilot Demo</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
@@ -149,10 +180,10 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
 
 <!-- Edit Journey Modal -->
 <div class="modal-bg" id="eModal">
-  <div class="modal" style="width:560px">
+  <div class="modal" style="width:520px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;color:white">Edit Journey</div>
-      <button onclick="closeModal('eModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
+      <button onclick="closeModal('eModal')" style="background:#1e2a3a;border:none;color:#64748b;cursor:pointer;font-size:16px;width:28px;height:28px;border-radius:6px">✕</button>
     </div>
     <input type="hidden" id="e-id"/>
     <div style="display:flex;flex-direction:column;gap:14px">
@@ -163,7 +194,7 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
         <button class="btn btn-danger" onclick="deleteJourney()">Delete Journey</button>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost" onclick="closeModal('eModal')">Cancel</button>
-          <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+          <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
         </div>
       </div>
     </div>
@@ -175,7 +206,7 @@ label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;lett
   <div class="modal" style="width:700px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <div style="font-size:17px;font-weight:800;color:white" id="r-title">Run Detail</div>
-      <button onclick="closeModal('rModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
+      <button onclick="closeModal('rModal')" style="background:#1e2a3a;border:none;color:#64748b;cursor:pointer;font-size:16px;width:28px;height:28px;border-radius:6px">✕</button>
     </div>
     <div id="r-body"></div>
   </div>
@@ -191,16 +222,40 @@ const TPLS = {
   login:{ name:'User Login Flow', goal:'Verify a user can log in with valid credentials and reach the dashboard', steps:'Navigate to the homepage\nClick the Sign In or Login button\nEnter email into the email field\nEnter password into the password field\nClick the Login button\nVerify the dashboard or account page is visible' },
   signup:{ name:'User Sign Up Flow', goal:'Verify a new user can create an account and reach onboarding', steps:'Navigate to the homepage\nClick the Sign Up or Get Started button\nFill in the name field\nFill in the email field\nFill in the password field\nClick Create Account\nVerify the confirmation or welcome screen appears' },
   checkout:{ name:'Checkout Flow', goal:'Verify a user can add a product to cart and reach payment', steps:'Navigate to the products page\nClick on the first product\nClick Add to Cart\nVerify cart shows 1 item\nClick Checkout\nVerify the payment form is visible' },
-  audit:{ name:'Full Site Audit', goal:'Audit all key public pages for accessibility, performance, security and UX quality', steps:'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nVerify no error messages are visible' },
-  nomadpilot:{ name:'NomadPilot Full Audit', goal:'Audit all public pages of nomadpilot.app for accessibility, performance, security and UX quality', steps:'Navigate to https://nomadpilot.app and wait for the homepage to load\nTake a screenshot of the full homepage\nVerify the main heading is visible\nScroll down to see the features section\nClick the Pricing link\nTake a screenshot of the pricing page\nClick the Sign Up button\nVerify the signup page is visible' }
+  audit:{ name:'Full Site Audit', goal:'Audit all key public pages for accessibility, performance, security and UX quality', steps:'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nVerify no error messages are visible' }
 };
 
 function sc(s){ return s>=80?'#4ade80':s>=60?'#fbbf24':'#f87171' }
 function ago(ts){ if(!ts)return'—'; const m=Math.floor((Date.now()-new Date(ts))/60000); if(m<1)return'just now'; if(m<60)return m+'m ago'; if(m<1440)return Math.floor(m/60)+'h ago'; return Math.floor(m/1440)+'d ago'; }
-function badge(s){ return `<span class="badge ${s}">${s.toUpperCase()}</span>` }
+function badge(s){ const cfg={passed:'#052e16;color:#4ade80;border:1px solid #166534',failed:'#1c0505;color:#f87171;border:1px solid #991b1b',running:'#1c1505;color:#fbbf24;border:1px solid #92400e',pending:'#111827;color:#475569;border:1px solid #1e2a3a'}; const c=cfg[s]||cfg.pending; return `<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.04em;background:${c.split(';')[0]};${c.split(';')[1]};${c.split(';')[2]}">${s.toUpperCase()}</span>`; }
 function closeModal(id){ document.getElementById(id).classList.remove('open') }
 function openNewJourney(){ document.getElementById('jModal').classList.add('open') }
 function fillTpl(k){ const t=TPLS[k]; document.getElementById('j-name').value=t.name; document.getElementById('j-goal').value=t.goal; document.getElementById('j-steps').value=t.steps; }
+
+// AUTH GUARD
+const guard = document.getElementById('auth-guard');
+guard.classList.add('show');
+
+async function initAuth(){
+  const { data: { session } } = await db.auth.getSession();
+  if(!session){
+    document.getElementById('auth-msg').textContent = 'Redirecting to sign in...';
+    setTimeout(()=>{ window.location.href = '/signin'; }, 800);
+    return;
+  }
+  guard.classList.remove('show');
+  const email = session.user.email || '';
+  document.getElementById('user-email').textContent = email;
+  document.getElementById('user-avatar').textContent = email.charAt(0).toUpperCase();
+  loadStats();
+  loadJourneys();
+  setInterval(loadStats, 30000);
+}
+
+async function logout(){
+  await db.auth.signOut();
+  window.location.href = '/signin';
+}
 
 function showView(v, el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -222,7 +277,7 @@ async function loadStats(){
   const rate=total?Math.round(passed/total*100):0;
   document.getElementById('usage-label').textContent=total+' runs total';
   document.getElementById('stats-row').innerHTML=[
-    ['Active Journeys',(journeys||[]).length,'#a78bfa'],
+    ['Active Journeys',(journeys||[]).length,'#818cf8'],
     ['Passed',passed,'#4ade80'],
     ['Failed',failed,'#f87171'],
     ['Pass Rate',rate+'%',sc(rate)]
@@ -233,51 +288,45 @@ async function loadJourneys(){
   document.getElementById('view-title').textContent='Journey Monitor';
   document.getElementById('view-sub').textContent='All active journeys — latest AI run results';
   document.getElementById('hdr-actions').innerHTML=`<button class="btn btn-ghost" id="run-btn" onclick="triggerRun()">▶ Run All Now</button><button class="btn btn-primary" onclick="openNewJourney()">+ New Journey</button>`;
-
   const [{data:journeys},{data:outcomes},{data:runs}] = await Promise.all([
     db.from('journeys').select('*').eq('is_active',true).order('created_at',{ascending:false}),
     db.from('outcomes').select('*').order('created_at',{ascending:false}),
     db.from('test_runs').select('*').order('started_at',{ascending:false})
   ]);
-
   const oMap={}, rMap={};
   (outcomes||[]).forEach(o=>{ if(!oMap[o.journey_id]) oMap[o.journey_id]=o; });
   (runs||[]).forEach(r=>{ if(!rMap[r.id]) rMap[r.id]=r; });
-
   const content=document.getElementById('view-content');
   if(!(journeys||[]).length){
     content.innerHTML=`<div class="empty-state"><div class="empty-icon">🚀</div><div class="empty-title">No journeys yet</div><div class="empty-sub">Click "+ New Journey" to define your first AI test</div></div>`;
     return;
   }
-
   content.innerHTML=(journeys||[]).map(j=>{
     const o=oMap[j.id], r=o?rMap[o.run_id]:null;
-    const tags=(j.tags||[]).map(t=>`<span style="font-size:10px;background:#1e2535;color:#6b7280;padding:2px 8px;border-radius:20px">${t}</span>`).join(' ');
+    const tags=(j.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ');
     const cls=!o?'pending':o.passed?'passed':'failed';
     const dur=r?.duration_ms?(r.duration_ms/1000).toFixed(1)+'s':'—';
     const sha=r?.commit_sha?r.commit_sha.slice(0,7):'—';
     return `<div class="journey-card ${cls}" onclick="openRunModal('${o?.run_id||''}','${j.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
             <span style="font-size:15px;font-weight:800;color:white">${j.name}</span>${tags}
           </div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:8px">${j.goal}</div>
-          ${o?`<div style="display:flex;gap:14px;font-size:11px;color:#4b5563;flex-wrap:wrap">
-            <span>✅ ${o.passed_steps} passed</span>
-            <span>❌ ${o.failed_steps} failed</span>
+          <div style="font-size:12px;color:#475569;margin-bottom:8px;line-height:1.5">${j.goal}</div>
+          ${o?`<div style="display:flex;gap:14px;font-size:11px;color:#334155;flex-wrap:wrap">
+            <span style="color:#4ade80">✅ ${o.passed_steps} passed</span>
+            <span style="color:#f87171">❌ ${o.failed_steps} failed</span>
             ${o.healed_steps>0?`<span style="color:#fb923c">⚡ ${o.healed_steps} healed</span>`:''}
             <span>${ago(r?.started_at)}</span>
-            <span style="font-family:monospace">${sha}</span>
+            <span style="font-family:monospace;color:#334155">${sha}</span>
             <span>${dur}</span>
-          </div>`:`<div style="font-size:11px;color:#374151">Push to GitHub to trigger first run</div>`}
-          ${o?.ai_summary?`<div style="font-size:11px;color:#4b5563;margin-top:6px;background:#0d1117;padding:7px 10px;border-radius:7px;line-height:1.6">💬 ${o.ai_summary}</div>`:''}
+          </div>`:`<div style="font-size:11px;color:#334155">Push to GitHub or click Run All Now to trigger first run</div>`}
+          ${o?.ai_summary?`<div style="font-size:11px;color:#475569;margin-top:8px;background:#080c14;padding:8px 10px;border-radius:8px;line-height:1.6;border:1px solid #1e2a3a">💬 ${o.ai_summary}</div>`:''}
         </div>
         <div style="flex-shrink:0;text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
           ${o?badge(o.passed?'passed':'failed'):badge('pending')}
-          <div style="display:flex;gap:5px">
-            <button onclick="event.stopPropagation();openEditModal('${j.id}','${j.name.replace(/'/g,"\\'")}','${j.goal.replace(/'/g,"\\'")}','${j.target_url}')" style="font-size:10px;background:#1e2535;border:1px solid #2d3748;color:#9ca3af;padding:3px 9px;border-radius:5px;cursor:pointer">Edit</button>
-          </div>
+          <button onclick="event.stopPropagation();openEditModal('${j.id}','${j.name.replace(/'/g,"\\'")}','${j.goal.replace(/'/g,"\\'")}','${j.target_url}')" style="font-size:10px;background:#1a2535;border:1px solid #1e2a3a;color:#64748b;padding:3px 9px;border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif">Edit</button>
         </div>
       </div>
     </div>`;
@@ -297,16 +346,16 @@ async function loadRuns(){
   (journeys||[]).forEach(j=>jMap[j.id]=j.name);
   (outcomes||[]).forEach(o=>oMap[o.run_id]=o);
   const content=document.getElementById('view-content');
-  if(!(runs||[]).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">🏃</div><div class="empty-title">No runs yet</div><div class="empty-sub">Push to GitHub or click Run All Now to trigger your first run</div></div>`; return; }
+  if(!(runs||[]).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">🏃</div><div class="empty-title">No runs yet</div><div class="empty-sub">Click Run All Now to trigger your first run</div></div>`; return; }
   content.innerHTML=(runs||[]).map(r=>{
     const o=oMap[r.id], dur=r.duration_ms?(r.duration_ms/1000).toFixed(1)+'s':'—';
     return `<div class="journey-card" style="cursor:pointer" onclick="openRunModal('${r.id}','')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${badge(r.status)}<span style="font-size:14px;font-weight:700;color:white">${jMap[r.journey_id]||'Unknown'}</span></div>
-          <div style="font-size:11px;color:#4b5563">${ago(r.started_at)} · ${dur} · <span style="font-family:monospace">${r.commit_sha?.slice(0,7)||'—'}</span> · ${r.branch||'main'}${o?' · '+o.passed_steps+'/'+o.total_steps+' steps':''}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">${badge(r.status)}<span style="font-size:14px;font-weight:700;color:white">${jMap[r.journey_id]||'Unknown'}</span></div>
+          <div style="font-size:11px;color:#334155">${ago(r.started_at)} · ${dur} · <span style="font-family:monospace">${r.commit_sha?.slice(0,7)||'—'}</span> · ${r.branch||'main'}${o?' · '+o.passed_steps+'/'+o.total_steps+' steps':''}</div>
         </div>
-        <span style="font-size:11px;color:#374151">View →</span>
+        <span style="font-size:11px;color:#334155">View →</span>
       </div>
     </div>`;
   }).join('');
@@ -333,11 +382,11 @@ async function loadAudits(){
     const scores=row.audits.map(a=>`<div class="audit-score"><div class="audit-score-val" style="color:${sc(a.score||0)}">${a.score??'—'}</div><div class="audit-score-label">${a.audit_type.replace('_',' ')}</div></div>`).join('');
     const ai=row.audits.find(a=>a.audit_type==='ai_vision');
     return `<div class="card" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px">
-        <div><div style="font-size:14px;font-weight:800;color:white;margin-bottom:2px">${jn}</div><div style="font-size:11px;color:#4b5563">${ago(row.run?.started_at)}</div></div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;min-width:220px">${scores}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
+        <div><div style="font-size:14px;font-weight:800;color:white;margin-bottom:3px">${jn}</div><div style="font-size:11px;color:#334155">${ago(row.run?.started_at)}</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;min-width:240px">${scores}</div>
       </div>
-      ${ai?.ai_narrative?`<div style="font-size:12px;color:#6b7280;background:#0d1117;border-radius:8px;padding:10px 12px;line-height:1.7">💬 ${ai.ai_narrative}</div>`:''}
+      ${ai?.ai_narrative?`<div style="font-size:12px;color:#475569;background:#080c14;border:1px solid #1e2a3a;border-radius:8px;padding:10px 12px;line-height:1.7">💬 ${ai.ai_narrative}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -354,10 +403,10 @@ async function loadReports(){
   const content=document.getElementById('view-content');
   if(!(reports||[]).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No reports yet</div><div class="empty-sub">Reports are generated after each run completes</div></div>`; return; }
   content.innerHTML=(reports||[]).map(r=>`<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-    <div><div style="font-size:14px;font-weight:700;color:white;margin-bottom:3px">${jMap[r.journey_id]||'Unknown'}</div><div style="font-size:11px;color:#4b5563">${ago(r.generated_at)}</div></div>
+    <div><div style="font-size:14px;font-weight:700;color:white;margin-bottom:3px">${jMap[r.journey_id]||'Unknown'}</div><div style="font-size:11px;color:#334155">${ago(r.generated_at)}</div></div>
     <div style="display:flex;gap:6px;flex-shrink:0">
       ${r.html_url?`<a href="${r.html_url}" target="_blank" class="btn btn-ghost" style="font-size:12px;text-decoration:none">View Report</a>`:''}
-      ${r.report_url?`<a href="${r.report_url}" target="_blank" class="btn btn-primary" style="font-size:12px;text-decoration:none">Download PDF</a>`:'<span style="font-size:11px;color:#374151">PDF pending</span>'}
+      ${r.report_url?`<a href="${r.report_url}" target="_blank" class="btn btn-primary" style="font-size:12px;text-decoration:none">Download PDF</a>`:'<span style="font-size:11px;color:#334155">PDF pending</span>'}
     </div>
   </div>`).join('');
 }
@@ -365,7 +414,7 @@ async function loadReports(){
 async function openRunModal(runId, journeyId){
   if(!runId) return;
   document.getElementById('rModal').classList.add('open');
-  document.getElementById('r-body').innerHTML=`<div style="text-align:center;padding:40px;color:#4b5563;font-size:13px">Loading...</div>`;
+  document.getElementById('r-body').innerHTML=`<div style="text-align:center;padding:40px;color:#475569;font-size:13px">Loading run details...</div>`;
   const [{data:steps},{data:outcome},{data:audits},{data:report}] = await Promise.all([
     db.from('step_results').select('*').eq('run_id',runId).order('step_index'),
     db.from('outcomes').select('*').eq('run_id',runId).maybeSingle(),
@@ -373,34 +422,33 @@ async function openRunModal(runId, journeyId){
     db.from('reports').select('*').eq('run_id',runId).maybeSingle()
   ]);
   document.getElementById('r-title').textContent=outcome?(outcome.passed?'✅ Journey Passed':'❌ Journey Failed'):'Run Detail';
-  const summary=outcome?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-    ${[['Result',outcome.passed?'PASS':'FAIL',outcome.passed?'#4ade80':'#f87171'],['Steps',outcome.passed_steps+'/'+outcome.total_steps,'white'],['Healed',outcome.healed_steps||0,'#fb923c'],['Failed',outcome.failed_steps,'#f87171']].map(([l,v,c])=>`<div style="background:#0d1117;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#4b5563;margin-top:2px;text-transform:uppercase">${l}</div></div>`).join('')}
-  </div>${outcome.ai_summary?`<div style="font-size:12px;color:#6b7280;background:#0d1117;padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.7">💬 ${outcome.ai_summary}</div>`:'`':''}
-  `:'';
-  const stepsHtml=(steps||[]).map((s,i)=>`<div class="step-item">
+  const summary=outcome?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+    ${[['Result',outcome.passed?'PASS':'FAIL',outcome.passed?'#4ade80':'#f87171'],['Steps',outcome.passed_steps+'/'+outcome.total_steps,'white'],['Healed',outcome.healed_steps||0,'#fb923c'],['Failed',outcome.failed_steps,'#f87171']].map(([l,v,c])=>`<div style="background:#080c14;border:1px solid #1e2a3a;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#334155;margin-top:3px;text-transform:uppercase;font-weight:700">${l}</div></div>`).join('')}
+  </div>${outcome.ai_summary?`<div style="font-size:12px;color:#475569;background:#080c14;border:1px solid #1e2a3a;padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.7">💬 ${outcome.ai_summary}</div>`:''}`:''
+  const stepsHtml=(steps||[]).map(s=>`<div class="step-item">
     <div class="step-dot" style="background:${s.status==='passed'?'#4ade80':'#f87171'}"></div>
     <div style="flex:1">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap">
         <span style="font-size:13px;font-weight:700;color:${s.status==='passed'?'#e2e8f0':'#fca5a5'}">${s.step_description}</span>
         ${s.heal_attempts>0?'<span style="font-size:9px;background:#451a03;color:#fb923c;border:1px solid #9a3412;padding:1px 7px;border-radius:20px;font-weight:700">⚡ HEALED</span>':''}
       </div>
-      ${s.ai_reasoning?`<div style="font-size:11px;color:#4b5563;font-style:italic;margin-bottom:3px">"${s.ai_reasoning}"</div>`:''}
-      ${s.error_message?`<div style="font-size:11px;color:#f87171;background:#1c0505;padding:4px 8px;border-radius:5px;margin-bottom:3px">${s.error_message}</div>`:''}
-      ${s.screenshot_url?`<img src="${s.screenshot_url}" style="width:100%;border-radius:7px;margin-top:6px;border:1px solid #2d3748" loading="lazy"/>`:''}
+      ${s.ai_reasoning?`<div style="font-size:11px;color:#475569;font-style:italic;margin-bottom:4px">"${s.ai_reasoning}"</div>`:''}
+      ${s.error_message?`<div style="font-size:11px;color:#f87171;background:#1c0505;border:1px solid #7f1d1d;padding:5px 8px;border-radius:5px;margin-bottom:4px">${s.error_message}</div>`:''}
+      ${s.screenshot_url?`<img src="${s.screenshot_url}" style="width:100%;border-radius:8px;margin-top:6px;border:1px solid #1e2a3a" loading="lazy"/>`:''}
     </div>
-    <div style="font-size:10px;color:#374151;white-space:nowrap">${s.duration_ms||0}ms</div>
+    <div style="font-size:10px;color:#334155;white-space:nowrap">${s.duration_ms||0}ms</div>
   </div>`).join('');
-  const auditHtml=(audits||[]).length?`<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px">Audit Scores</div>
+  const auditHtml=(audits||[]).length?`<div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 10px">Audit Scores</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
       ${(audits||[]).map(a=>`<div class="audit-score"><div class="audit-score-val" style="color:${sc(a.score||0)}">${a.score??'—'}</div><div class="audit-score-label">${a.audit_type.replace('_',' ')}</div></div>`).join('')}
     </div>
-    ${(audits||[]).find(a=>a.ai_narrative)?`<div style="font-size:12px;color:#6b7280;background:#0d1117;padding:10px 12px;border-radius:8px;margin-top:10px;line-height:1.7">💬 ${(audits.find(a=>a.ai_narrative)||{}).ai_narrative||''}</div>`:''}
+    ${(audits||[]).find(a=>a.ai_narrative)?`<div style="font-size:12px;color:#475569;background:#080c14;border:1px solid #1e2a3a;padding:10px 12px;border-radius:8px;margin-top:10px;line-height:1.7">💬 ${(audits.find(a=>a.ai_narrative)||{}).ai_narrative||''}</div>`:''}
   `:'';
-  const reportLinks=report?`<div style="display:flex;gap:8px;margin-top:16px">
+  const reportLinks=report?`<div style="display:flex;gap:8px;margin-top:18px">
     ${report.html_url?`<a href="${report.html_url}" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px">View Report</a>`:''}
     ${report.report_url?`<a href="${report.report_url}" target="_blank" class="btn btn-primary" style="text-decoration:none;font-size:12px">Download PDF</a>`:''}
   </div>`:'';
-  document.getElementById('r-body').innerHTML=summary+`<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Steps</div>`+stepsHtml+auditHtml+reportLinks;
+  document.getElementById('r-body').innerHTML=summary+`<div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Steps</div>`+stepsHtml+auditHtml+reportLinks;
 }
 
 function openEditModal(id,name,goal,url){
@@ -461,9 +509,7 @@ async function triggerRun(){
   }
 }
 
-loadStats();
-loadJourneys();
-setInterval(loadStats,30000);
+initAuth();
 </script>
 </body>
 </html>
