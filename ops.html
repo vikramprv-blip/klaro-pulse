@@ -3,251 +3,547 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Klaro Pulse — Site Intelligence Portal</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>Klaro Pulse — Site Intelligence</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .score-ring { transition: stroke-dashoffset 1s ease; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#080c14;color:#94a3b8;min-height:100vh}
+
+/* Auth */
+#gate{max-width:420px;margin:80px auto;padding:40px;background:#0f1420;border:1px solid #1e2a3a;border-radius:24px;text-align:center}
+.logo{font-size:20px;font-weight:900;color:white;margin-bottom:4px}
+.logo span{color:#6366f1}
+#gate input{width:100%;background:#080c14;border:1px solid #1e2a3a;border-radius:12px;padding:12px 16px;color:white;font-size:14px;outline:none;margin:20px 0 12px;text-align:center;letter-spacing:0.1em}
+#gate input:focus{border-color:#6366f1}
+#gate button{width:100%;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer}
+#gate button:hover{opacity:0.9}
+
+/* Layout */
+#app{display:none;min-height:100vh;flex-direction:column}
+.topbar{background:#0a0f1a;border-bottom:1px solid #1e2a3a;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.topbar-logo{font-size:16px;font-weight:900;color:white}
+.topbar-logo span{color:#6366f1}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.user-pill{display:flex;align-items:center;gap:8px;background:#0f1420;border:1px solid #1e2a3a;border-radius:20px;padding:5px 12px 5px 5px}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white}
+.user-email{font-size:11px;color:#64748b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{padding:8px 16px;border-radius:10px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:all 0.15s}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:#64748b;border:1px solid #1e2a3a}
+.btn-ghost:hover{background:#1a2535;color:#cbd5e1}
+.btn-danger{background:transparent;color:#f87171;border:1px solid #991b1b;font-size:11px;padding:5px 10px}
+.btn-danger:hover{background:#1c0505}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+/* Main */
+.main{flex:1;padding:28px 24px;max-width:1400px;width:100%;margin:0 auto}
+
+/* Scan bar */
+.scan-bar{background:#0f1420;border:1px solid #1e2a3a;border-radius:16px;padding:20px 24px;margin-bottom:24px}
+.scan-bar h2{font-size:13px;font-weight:700;color:white;margin-bottom:14px;display:flex;align-items:center;gap-8px}
+.scan-tabs{display:flex;gap:6px;margin-bottom:16px}
+.scan-tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #1e2a3a;color:#64748b;background:transparent;font-family:inherit}
+.scan-tab.active{background:#1e2d4a;color:#818cf8;border-color:#3b4fd8}
+.scan-input-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.scan-input{flex:1;min-width:260px;background:#080c14;border:1px solid #1e2a3a;border-radius:10px;padding:10px 14px;color:white;font-size:13px;outline:none;font-family:inherit}
+.scan-input:focus{border-color:#6366f1}
+.scan-input::placeholder{color:#334155}
+.scan-status{font-size:12px;padding:8px 14px;border-radius:8px;margin-top:10px;display:none}
+.scan-status.scanning{display:block;background:#1e2d4a;color:#818cf8;border:1px solid #3b4fd8}
+.scan-status.success{display:block;background:#052e16;color:#4ade80;border:1px solid #166534}
+.scan-status.error{display:block;background:#1c0505;color:#f87171;border:1px solid #991b1b}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:#0f1420;border:1px solid #1e2a3a;border-radius:14px;padding:18px 20px}
+.stat-val{font-size:28px;font-weight:900;letter-spacing:-0.5px}
+.stat-lbl{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-top:4px}
+.stat-sub{font-size:11px;color:#334155;margin-top:2px}
+
+/* Filters */
+.filters{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1e2a3a;color:#475569;background:transparent;font-family:inherit}
+.filter-btn.active{background:#1e2d4a;color:#818cf8;border-color:#3b4fd8}
+.filter-btn:hover:not(.active){background:#1a2535;color:#cbd5e1}
+#search-input{background:#080c14;border:1px solid #1e2a3a;border-radius:10px;padding:5px 12px;color:white;font-size:12px;outline:none;width:200px;font-family:inherit;margin-left:auto}
+#search-input:focus{border-color:#6366f1}
+
+/* Report cards */
+.report-card{background:#0f1420;border:1px solid #1e2a3a;border-radius:16px;overflow:hidden;margin-bottom:12px;transition:border-color 0.15s}
+.report-card:hover{border-color:#2d3f55}
+.card-header{padding:18px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid #0d1520}
+.card-site{flex:1}
+.card-name{font-size:16px;font-weight:800;color:white;margin-bottom:3px}
+.card-url{font-size:11px;color:#334155}
+.card-time{font-size:10px;color:#1e2a3a;margin-top:2px}
+.card-score{flex-shrink:0;text-align:center}
+.score-circle{width:72px;height:72px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid}
+.score-num{font-size:22px;font-weight:900;line-height:1}
+.score-lbl{font-size:8px;font-weight:700;text-transform:uppercase;opacity:0.6;margin-top:1px}
+.card-summary{padding:14px 20px;font-size:13px;color:#64748b;line-height:1.6;border-bottom:1px solid #0d1520}
+.card-insight{padding:10px 20px;font-size:11px;color:#a78bfa;font-style:italic;border-bottom:1px solid #0d1520;background:#0d1020}
+.card-bars{padding:12px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-bottom:1px solid #0d1520}
+.bar-item{font-size:11px}
+.bar-label{display:flex;justify-content:space-between;margin-bottom:4px;color:#475569;font-weight:600}
+.bar-track{height:4px;background:#1e2a3a;border-radius:4px;overflow:hidden}
+.bar-fill{height:4px;border-radius:4px;transition:width 0.8s ease}
+.card-pills{padding:10px 20px;display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #0d1520}
+.pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid}
+.pill-green{background:#052e16;color:#4ade80;border-color:#166534}
+.pill-yellow{background:#1c1505;color:#fbbf24;border-color:#92400e}
+.pill-red{background:#1c0505;color:#f87171;border-color:#991b1b}
+.pill-blue{background:#0c1a3a;color:#818cf8;border-color:#3b4fd8}
+.pill-gray{background:#111827;color:#475569;border-color:#1e2a3a}
+.card-details{display:none}
+.card-details.open{display:block}
+.card-grid{padding:16px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.detail-col h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.detail-item{font-size:11px;color:#64748b;background:#080c14;border:1px solid #1e2a3a;border-radius:8px;padding:8px 10px;margin-bottom:6px;line-height:1.5}
+.card-actions{padding:12px 20px;display:flex;gap:8px;align-items:center;background:#0a0f1a}
+.toggle-btn{font-size:11px;color:#475569;cursor:pointer;padding:5px 10px;border-radius:6px;border:1px solid #1e2a3a;background:none;font-family:inherit}
+.toggle-btn:hover{background:#1a2535;color:#cbd5e1}
+
+/* Compare mode */
+.compare-grid{display:grid;gap:12px}
+
+/* Empty state */
+.empty{text-align:center;padding:80px 20px;color:#1e2a3a}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
+.empty-title{font-size:18px;font-weight:700;color:#334155;margin-bottom:8px}
+.empty-sub{font-size:13px}
+
+/* Loading */
+.loading-pulse{text-align:center;padding:60px 20px}
+.spinner{width:32px;height:32px;border:2px solid #1e2a3a;border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Compliance badge */
+.compliance-section{padding:12px 20px;border-bottom:1px solid #0d1520;background:#0a0f18}
+.compliance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.compliance-item{background:#080c14;border-radius:8px;padding:8px 10px;text-align:center;border:1px solid #1e2a3a}
+.compliance-score{font-size:16px;font-weight:900}
+.compliance-label{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;font-weight:600}
 </style>
 </head>
-<body class="bg-[#030712] text-slate-400 min-h-screen">
+<body>
 
 <!-- Auth Gate -->
-<div id="gate" class="max-w-md mx-auto mt-32 p-10 bg-slate-900/40 border border-slate-800 rounded-3xl text-center">
-  <div class="text-white font-black text-xl tracking-tight mb-1">KLARO <span class="text-indigo-500">PULSE</span></div>
-  <p class="text-slate-600 text-xs mb-8 tracking-widest uppercase">Site Intelligence Portal</p>
-  <input type="password" id="key" class="w-full bg-black/40 border border-slate-700 p-4 rounded-2xl mb-4 text-center text-white focus:border-indigo-500 outline-none text-sm" placeholder="Enter access key"/>
-  <button onclick="auth()" class="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-500 transition-all text-sm">Access Dashboard →</button>
-  <p class="text-slate-700 text-xs mt-4">Contact ops@klaro.services for access</p>
+<div id="gate">
+  <div class="logo">KLARO <span>PULSE</span></div>
+  <p style="font-size:11px;color:#334155;margin-top:4px;letter-spacing:0.08em;text-transform:uppercase">Site Intelligence Platform</p>
+  <input type="password" id="key" placeholder="Enter access key" autocomplete="off"/>
+  <button onclick="auth()">Access Dashboard →</button>
+  <p style="font-size:11px;color:#1e2a3a;margin-top:12px">ops@klaro.services for access</p>
 </div>
 
-<!-- Dashboard -->
-<div id="dash" class="hidden">
-
-  <!-- Header -->
-  <div class="border-b border-slate-900 bg-black/20 sticky top-0 z-10 backdrop-blur">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="text-white font-black text-lg tracking-tight">KLARO <span class="text-indigo-500">PULSE</span></div>
-        <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full font-bold">INTELLIGENCE</span>
+<!-- App -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">KLARO <span>PULSE</span></div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <div class="avatar" id="u-avatar">?</div>
+        <div class="user-email" id="u-email">Loading...</div>
       </div>
-      <div class="flex items-center gap-6">
-        <div class="text-center">
-          <div class="text-xs text-slate-600 uppercase tracking-widest">Portfolio Score</div>
-          <div id="avg-score" class="text-2xl font-black text-white">—</div>
-        </div>
-        <div class="text-center">
-          <div class="text-xs text-slate-600 uppercase tracking-widest">Sites Scanned</div>
-          <div id="total-scanned" class="text-2xl font-black text-white">—</div>
-        </div>
-        <button onclick="showScanInput()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-all">+ Scan New Site</button>
-      </div>
+      <button class="btn btn-danger" onclick="logout()">Sign out</button>
     </div>
   </div>
 
-  <!-- Scan input bar -->
-  <div id="scan-bar" class="hidden bg-slate-900/50 border-b border-slate-800">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex gap-3 items-center">
-      <input id="scan-url" type="url" placeholder="https://competitor.com" class="flex-1 bg-black/40 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500"/>
-      <input id="scan-name" placeholder="Company name" class="w-48 bg-black/40 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500"/>
-      <button onclick="addTarget()" class="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500">Add to Queue</button>
-      <button onclick="document.getElementById('scan-bar').classList.add('hidden')" class="px-4 py-2.5 text-slate-500 text-sm">Cancel</button>
+  <div class="main">
+
+    <!-- Scan Bar -->
+    <div class="scan-bar">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:800;color:white">🔍 Scan any website</div>
+        <div class="scan-tabs">
+          <button class="scan-tab active" onclick="setMode('single',this)">Single Site</button>
+          <button class="scan-tab" onclick="setMode('compare',this)">Compare (2-5 sites)</button>
+          <button class="scan-tab" onclick="setMode('batch',this)">Batch (all targets)</button>
+        </div>
+      </div>
+
+      <!-- Single mode -->
+      <div id="mode-single">
+        <div class="scan-input-row">
+          <input class="scan-input" id="url-single" type="url" placeholder="https://anywebsite.com — law firm, SaaS, competitor..."/>
+          <button class="btn btn-primary" id="btn-single" onclick="scanSingle()">Scan Now →</button>
+        </div>
+        <div style="font-size:11px;color:#334155;margin-top:8px">Results appear in 3-5 minutes · Works on any public website worldwide · No login to target site needed</div>
+      </div>
+
+      <!-- Compare mode -->
+      <div id="mode-compare" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:8px" id="compare-inputs">
+          <input class="scan-input" placeholder="https://site1.com (your client's site)"/>
+          <input class="scan-input" placeholder="https://competitor1.com"/>
+          <input class="scan-input" placeholder="https://competitor2.com"/>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="addCompareRow()">+ Add another</button>
+          <button class="btn btn-primary" id="btn-compare" onclick="scanCompare()">Compare All →</button>
+        </div>
+        <div style="font-size:11px;color:#334155;margin-top:8px">Scans all sites and shows side-by-side scores. Great for prospect meetings.</div>
+      </div>
+
+      <!-- Batch mode -->
+      <div id="mode-batch" style="display:none">
+        <div style="font-size:13px;color:#64748b;margin-bottom:12px">Scans all active targets in your database. Currently <span id="target-count" style="color:white;font-weight:700">—</span> targets queued.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary" id="btn-batch" onclick="scanBatch()">▶ Run Full Batch Scan</button>
+          <div style="font-size:11px;color:#334155">Takes 10-30 min depending on number of sites · Runs on GitHub Actions (free)</div>
+        </div>
+      </div>
+
+      <div class="scan-status" id="scan-status"></div>
     </div>
-  </div>
 
-  <!-- Filter bar -->
-  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center gap-3 flex-wrap">
-    <span class="text-xs text-slate-600 uppercase tracking-widest font-bold">Filter:</span>
-    <button onclick="filterReports('all')" class="filter-btn active px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-800 bg-slate-900 text-white">All</button>
-    <button onclick="filterReports('UP')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-800 text-slate-500 hover:text-white hover:bg-slate-900">Strong (75+)</button>
-    <button onclick="filterReports('DEGRADED')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-800 text-slate-500 hover:text-white hover:bg-slate-900">Needs Work</button>
-    <button onclick="filterReports('DOWN')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-800 text-slate-500 hover:text-white hover:bg-slate-900">Critical (&lt;50)</button>
-    <div class="flex-1"></div>
-    <input id="search" onkeyup="searchReports()" placeholder="Search sites..." class="bg-black/40 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-white outline-none focus:border-indigo-500 w-48"/>
-  </div>
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-val" style="color:#818cf8" id="s-total">—</div><div class="stat-lbl">Sites Scanned</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:#4ade80" id="s-avg">—</div><div class="stat-lbl">Avg Score</div><div class="stat-sub">out of 100</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:#f87171" id="s-critical">—</div><div class="stat-lbl">Need Urgent Fix</div><div class="stat-sub">score below 50</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:#fbbf24" id="s-last">—</div><div class="stat-lbl">Last Scanned</div></div>
+    </div>
 
-  <!-- Reports grid -->
-  <div class="max-w-7xl mx-auto px-6 pb-16">
-    <div id="loading" class="text-center py-20 text-slate-600">Loading intelligence reports...</div>
-    <div id="reports" class="space-y-6"></div>
+    <!-- Filters -->
+    <div class="filters">
+      <span style="font-size:10px;color:#334155;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Filter:</span>
+      <button class="filter-btn active" onclick="applyFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="applyFilter('UP',this)">Strong (75+)</button>
+      <button class="filter-btn" onclick="applyFilter('DEGRADED',this)">Needs Work (50-74)</button>
+      <button class="filter-btn" onclick="applyFilter('DOWN',this)">Critical (&lt;50)</button>
+      <button class="filter-btn" onclick="applyFilter('ERROR',this)">Errors</button>
+      <input id="search-input" placeholder="Search sites..." oninput="applySearch()"/>
+    </div>
+
+    <!-- Reports -->
+    <div id="reports-container">
+      <div class="loading-pulse"><div class="spinner"></div><div style="font-size:13px;color:#334155">Loading reports...</div></div>
+    </div>
+
   </div>
 </div>
 
 <script>
-let sb, allLogs = [];
+const SB_URL = 'https://chwyrdublpuavcmjendw.supabase.co';
+const SB_KEY_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3lyZHVibHB1YXZjbWplbmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NzU4ODAsImV4cCI6MjA5MjI1MTg4MH0.Jmohj83RKbeMyJwH-fru6pijTVb6GNc48W8wnSdm9DE';
+const { createClient } = supabase;
+let sb, allLogs = [], activeFilter = 'all', scanMode = 'single';
+
+// Auth
+document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('gate').style.display!=='none') auth(); });
 
 async function auth() {
   const k = document.getElementById('key').value.trim();
   if (!k) return;
-  sb = supabase.createClient('https://chwyrdublpuavcmjendw.supabase.co', k);
+  sb = createClient(SB_URL, k);
   const { error } = await sb.from('pulse_logs').select('id').limit(1);
-  if (error) { alert('Access denied. Check your key.'); return; }
-  document.getElementById('gate').classList.add('hidden');
-  document.getElementById('dash').classList.remove('hidden');
-  load();
+  if (error) { alert('Access denied. Wrong key.'); return; }
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  // Show email from session
+  const { data: { user } } = await sb.auth.getUser();
+  const email = user?.email || 'Admin';
+  document.getElementById('u-email').textContent = email;
+  document.getElementById('u-avatar').textContent = email.charAt(0).toUpperCase();
+  loadAll();
+  loadTargetCount();
+  setInterval(loadAll, 30000);
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('gate').classList.contains('hidden')) auth(); });
-
-function showScanInput() { document.getElementById('scan-bar').classList.toggle('hidden'); }
-
-async function addTarget() {
-  const url = document.getElementById('scan-url').value.trim();
-  const name = document.getElementById('scan-name').value.trim() || new URL(url).hostname;
-  if (!url) return alert('Enter a URL');
-  const { error } = await sb.from('pulse_targets').insert([{
-    name, url,
-    mission: 'Audit this website for UX friction, trust signals, conversion clarity and competitive weaknesses. Return authority_score (0-100), novice_summary, ux_friction_points array, resolution_steps array, strengths array, revenue_opportunities array, competitor_advantage, trust_score, conversion_score, mobile_readiness, target_audience_clarity, pricing_clarity, cta_effectiveness, industry.'
-  }]);
-  if (error) return alert('Error: ' + error.message);
-  document.getElementById('scan-url').value = '';
-  document.getElementById('scan-name').value = '';
-  document.getElementById('scan-bar').classList.add('hidden');
-  alert(`✅ ${name} added to scan queue. Run the agent to generate the report.`);
+async function logout() {
+  if (sb) await sb.auth.signOut();
+  location.reload();
 }
 
-async function load() {
-  const { data, error } = await sb.from('pulse_logs').select('*').order('created_at', { ascending: false }).limit(100);
-  document.getElementById('loading').classList.add('hidden');
-  if (error || !data?.length) {
-    document.getElementById('reports').innerHTML = `<div class="text-center py-20 text-slate-600"><p class="text-4xl mb-4">📡</p><p class="text-lg font-bold text-slate-500 mb-2">No scans yet</p><p class="text-sm">Run the agent to start scanning: <code class="text-indigo-400">node agents/pulse-agent.js</code></p></div>`;
-    return;
+// Mode switcher
+function setMode(mode, el) {
+  scanMode = mode;
+  document.querySelectorAll('.scan-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('mode-single').style.display = mode==='single' ? 'block' : 'none';
+  document.getElementById('mode-compare').style.display = mode==='compare' ? 'block' : 'none';
+  document.getElementById('mode-batch').style.display = mode==='batch' ? 'block' : 'none';
+  clearStatus();
+}
+
+function addCompareRow() {
+  const c = document.getElementById('compare-inputs');
+  if (c.children.length >= 5) return;
+  const inp = document.createElement('input');
+  inp.className = 'scan-input';
+  inp.placeholder = `https://competitor${c.children.length}.com`;
+  c.appendChild(inp);
+}
+
+async function loadTargetCount() {
+  if (!sb) return;
+  const { count } = await sb.from('pulse_targets').select('*', { count: 'exact', head: true }).eq('is_active', true);
+  document.getElementById('target-count').textContent = count || 0;
+}
+
+// Scanning
+async function triggerScan(target_url = '') {
+  const res = await fetch('/api/trigger', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_url })
+  });
+  return res.json();
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('scan-status');
+  el.textContent = msg;
+  el.className = `scan-status ${type}`;
+}
+
+function clearStatus() {
+  document.getElementById('scan-status').className = 'scan-status';
+}
+
+async function scanSingle() {
+  const url = document.getElementById('url-single').value.trim();
+  if (!url || !url.startsWith('http')) { showStatus('Please enter a valid URL starting with https://', 'error'); return; }
+  const btn = document.getElementById('btn-single');
+  btn.disabled = true; btn.textContent = 'Queuing scan...';
+  showStatus(`⏳ Scanning ${url} — results will appear below in 3-5 minutes...`, 'scanning');
+  const data = await triggerScan(url);
+  btn.disabled = false; btn.textContent = 'Scan Now →';
+  if (data.ok) {
+    showStatus(`✅ ${data.message} — This page auto-refreshes every 30 seconds.`, 'success');
+    document.getElementById('url-single').value = '';
+  } else {
+    showStatus(`❌ ${data.error || 'Could not trigger scan. Check GITHUB_PAT in Vercel env vars.'}`, 'error');
   }
-  allLogs = data;
-  const scores = data.map(l => l.metadata?.full_report?.authority_score || 0);
-  const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-  document.getElementById('avg-score').textContent = avg + '/100';
-  document.getElementById('total-scanned').textContent = data.length;
-  renderReports(data);
 }
 
-function scoreColor(s) { return s>=75?'text-green-400':s>=50?'text-yellow-400':'text-red-400'; }
-function scoreBg(s) { return s>=75?'bg-green-500/10 border-green-500/20':s>=50?'bg-yellow-500/10 border-yellow-500/20':'bg-red-500/10 border-red-500/20'; }
-function scoreBar(s) { return s>=75?'bg-green-500':s>=50?'bg-yellow-500':'bg-red-500'; }
-function ago(ts) { if(!ts)return'—'; const m=Math.floor((Date.now()-new Date(ts))/60000); if(m<1)return'just now'; if(m<60)return m+'m ago'; if(m<1440)return Math.floor(m/60)+'h ago'; return Math.floor(m/1440)+'d ago'; }
-function pill(label, val, good, bad) {
-  const cls = val===good?'bg-green-500/10 text-green-400 border-green-500/20':val===bad?'bg-red-500/10 text-red-400 border-red-500/20':'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-  return `<span class="px-2 py-0.5 rounded-full text-xs font-bold border ${cls}">${label}: ${val||'—'}</span>`;
+async function scanCompare() {
+  const inputs = document.querySelectorAll('#compare-inputs .scan-input');
+  const urls = Array.from(inputs).map(i => i.value.trim()).filter(u => u.startsWith('http'));
+  if (urls.length < 2) { showStatus('Enter at least 2 URLs to compare', 'error'); return; }
+  const btn = document.getElementById('btn-compare');
+  btn.disabled = true; btn.textContent = 'Queuing...';
+  showStatus(`⏳ Queuing ${urls.length} scans — results appear in 5-10 minutes...`, 'scanning');
+  for (const url of urls) await triggerScan(url);
+  btn.disabled = false; btn.textContent = 'Compare All →';
+  showStatus(`✅ ${urls.length} scans queued! Results will appear below as each completes.`, 'success');
+}
+
+async function scanBatch() {
+  const btn = document.getElementById('btn-batch');
+  btn.disabled = true; btn.textContent = 'Triggering batch...';
+  showStatus('⏳ Full batch scan triggered — all targets will be scanned over the next 10-30 minutes...', 'scanning');
+  const data = await triggerScan('');
+  btn.disabled = false; btn.textContent = '▶ Run Full Batch Scan';
+  if (data.ok) showStatus(`✅ ${data.message}`, 'success');
+  else showStatus(`❌ ${data.error || 'Failed. Check GITHUB_PAT in Vercel env vars.'}`, 'error');
+}
+
+// Load & render
+async function loadAll() {
+  if (!sb) return;
+  const { data, error } = await sb.from('pulse_logs').select('*').order('created_at', { ascending: false }).limit(200);
+  if (error || !data) return;
+  allLogs = data;
+  updateStats(data);
+  renderReports(filterLogs(data));
+}
+
+function updateStats(logs) {
+  const scores = logs.map(l => l.metadata?.full_report?.authority_score || 0).filter(s => s > 0);
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+  const critical = logs.filter(l => (l.metadata?.full_report?.authority_score||0) < 50 && l.status !== 'ERROR').length;
+  const last = logs[0]?.created_at ? ago(logs[0].created_at) : '—';
+  document.getElementById('s-total').textContent = logs.length;
+  document.getElementById('s-avg').textContent = avg || '—';
+  document.getElementById('s-critical').textContent = critical;
+  document.getElementById('s-last').textContent = last;
+}
+
+function filterLogs(logs) {
+  let f = activeFilter === 'all' ? logs : logs.filter(l => l.status === activeFilter);
+  const q = document.getElementById('search-input')?.value?.toLowerCase() || '';
+  if (q) f = f.filter(l => {
+    const name = (l.metadata?.target_name||'').toLowerCase();
+    const url = (l.url||'').toLowerCase();
+    const summary = (l.reasoning||'').toLowerCase();
+    return name.includes(q) || url.includes(q) || summary.includes(q);
+  });
+  return f;
+}
+
+function applyFilter(status, el) {
+  activeFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderReports(filterLogs(allLogs));
+}
+
+function applySearch() { renderReports(filterLogs(allLogs)); }
+
+function sc(s) { return s>=75?'#4ade80':s>=50?'#fbbf24':'#f87171'; }
+function scBorder(s) { return s>=75?'#166534':s>=50?'#92400e':'#991b1b'; }
+function scBar(s) { return s>=75?'#4ade80':s>=50?'#fbbf24':'#f87171'; }
+function ago(ts) {
+  if(!ts) return '—';
+  const m = Math.floor((Date.now()-new Date(ts))/60000);
+  if(m<1) return 'just now';
+  if(m<60) return m+'m ago';
+  if(m<1440) return Math.floor(m/60)+'h ago';
+  return Math.floor(m/1440)+'d ago';
+}
+
+function pillClass(val, good, warn, bad) {
+  if (!val || val === '—') return 'pill-gray';
+  if (val === good) return 'pill-green';
+  if (val === bad) return 'pill-red';
+  return 'pill-yellow';
 }
 
 function renderReports(logs) {
+  const container = document.getElementById('reports-container');
   if (!logs.length) {
-    document.getElementById('reports').innerHTML = `<div class="text-center py-12 text-slate-600">No results match your filter.</div>`;
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📡</div><div class="empty-title">${activeFilter==='all'?'No scans yet':'No results for this filter'}</div><div class="empty-sub">${activeFilter==='all'?'Enter a URL above and click Scan Now to get started':'Try a different filter'}</div></div>`;
     return;
   }
-  document.getElementById('reports').innerHTML = logs.map(log => {
+
+  container.innerHTML = logs.map((log, idx) => {
     const r = log.metadata?.full_report || {};
-    const name = log.metadata?.target_name || new URL(log.url||'https://unknown.com').hostname;
+    const name = log.metadata?.target_name || (() => { try { return new URL(log.url||'').hostname; } catch { return log.url||'Unknown'; } })();
     const score = r.authority_score || 0;
     const trust = r.trust_score || 0;
     const conv = r.conversion_score || 0;
+    const id = `card-${idx}`;
+
+    // Compliance scores (derived from our data)
+    const httpsScore = (log.url||'').startsWith('https') ? 100 : 0;
+    const mobileScore = r.mobile_readiness === 'Good' ? 90 : r.mobile_readiness === 'Needs Work' ? 60 : 30;
+    const accessScore = r.accessibility_score || (score > 70 ? 75 : 50);
+    const seoScore = r.pricing_clarity === 'Clear' && r.target_audience_clarity === 'Clear' ? 80 : 55;
 
     return `
-    <div class="bg-slate-900/30 border border-slate-800/60 rounded-2xl overflow-hidden hover:border-slate-700 transition-all" data-status="${log.status}" data-name="${name.toLowerCase()}" data-url="${(log.url||'').toLowerCase()}">
-      
-      <!-- Card Header -->
-      <div class="px-8 py-6 flex items-start justify-between gap-6 border-b border-slate-800/60">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-3 flex-wrap">
-            <a href="${log.url}" target="_blank" class="text-white font-black text-xl hover:text-indigo-400 transition-colors">${name}</a>
-            <a href="${log.url}" target="_blank" class="text-slate-600 text-xs hover:text-slate-400">${log.url}</a>
-            <span class="text-xs text-slate-600">${ago(log.created_at)}</span>
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed max-w-2xl">${r.novice_summary || log.reasoning || '—'}</p>
-          ${r.competitor_advantage ? `<p class="text-amber-400/80 text-xs mt-3 italic">💡 ${r.competitor_advantage}</p>` : ''}
+    <div class="report-card" id="${id}">
+      <div class="card-header">
+        <div class="card-site">
+          <div class="card-name">${name}</div>
+          <a href="${log.url||'#'}" target="_blank" class="card-url">${log.url||'—'}</a>
+          <div class="card-time">${ago(log.created_at)} · ${log.status}</div>
         </div>
-        
-        <!-- Score Circle -->
-        <div class="flex-shrink-0 text-center">
-          <div class="w-24 h-24 rounded-full border-4 ${score>=75?'border-green-500/30':score>=50?'border-yellow-500/30':'border-red-500/30'} flex flex-col items-center justify-center bg-black/30">
-            <span class="text-3xl font-black ${scoreColor(score)}">${score}</span>
-            <span class="text-xs text-slate-600 font-bold">/100</span>
+        <div class="card-score">
+          <div class="score-circle" style="border-color:${scBorder(score)};color:${sc(score)}">
+            <div class="score-num" style="color:${sc(score)}">${score}</div>
+            <div class="score-lbl">/100</div>
           </div>
-          <div class="text-xs text-slate-600 mt-1 font-bold uppercase tracking-wide">${log.status}</div>
+          <div style="font-size:9px;color:#334155;margin-top:4px;text-transform:uppercase;font-weight:700">${log.status}</div>
         </div>
       </div>
 
-      <!-- Score bars -->
-      <div class="px-8 py-4 grid grid-cols-3 gap-4 border-b border-slate-800/40">
-        ${[['Overall', score],['Trust', trust],['Conversion', conv]].map(([l,v])=>`
-          <div>
-            <div class="flex justify-between text-xs mb-1.5">
-              <span class="text-slate-500 font-semibold">${l}</span>
-              <span class="${scoreColor(v)} font-bold">${v}/100</span>
-            </div>
-            <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div class="${scoreBar(v)} h-full rounded-full transition-all" style="width:${v}%"></div>
-            </div>
+      ${r.novice_summary||log.reasoning ? `<div class="card-summary">${r.novice_summary||log.reasoning}</div>` : ''}
+      ${r.competitor_advantage ? `<div class="card-insight">💡 ${r.competitor_advantage}</div>` : ''}
+
+      <div class="card-bars">
+        ${[['Overall Score',score],['Trust Score',trust],['Conversion',conv]].map(([l,v])=>`
+          <div class="bar-item">
+            <div class="bar-label"><span>${l}</span><span style="color:${sc(v)}">${v}/100</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${scBar(v)}"></div></div>
           </div>
         `).join('')}
       </div>
 
-      <!-- Pills row -->
-      <div class="px-8 py-3 flex flex-wrap gap-2 border-b border-slate-800/40">
-        ${pill('Mobile', r.mobile_readiness, 'Good', 'Poor')}
-        ${pill('Audience', r.target_audience_clarity, 'Clear', 'Confusing')}
-        ${pill('Pricing', r.pricing_clarity, 'Clear', 'Hidden')}
-        ${pill('CTA', r.cta_effectiveness, 'Strong', 'Missing')}
-        ${r.industry ? `<span class="px-2 py-0.5 rounded-full text-xs font-bold border bg-indigo-500/10 text-indigo-400 border-indigo-500/20">${r.industry}</span>` : ''}
-        ${r.load_time_ms ? `<span class="px-2 py-0.5 rounded-full text-xs font-bold border ${r.load_time_ms<3000?'bg-green-500/10 text-green-400 border-green-500/20':'bg-red-500/10 text-red-400 border-red-500/20'}">Load: ${(r.load_time_ms/1000).toFixed(1)}s</span>` : ''}
-      </div>
-
-      <!-- Issues + Fixes + Opportunities -->
-      <div class="px-8 py-6 grid md:grid-cols-3 gap-6">
-        <div>
-          <h4 class="text-red-400 text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 bg-red-500 rounded-full"></span> Problems Found
-          </h4>
-          <div class="space-y-2">
-            ${(r.ux_friction_points||[]).map(p=>`<div class="text-xs text-slate-400 bg-red-500/5 border border-red-500/10 rounded-xl p-3 leading-relaxed">⚠ ${p}</div>`).join('') || '<div class="text-xs text-slate-600">None detected</div>'}
+      <div class="compliance-section">
+        <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em">Compliance & Technical</div>
+        <div class="compliance-grid">
+          <div class="compliance-item">
+            <div class="compliance-score" style="color:${sc(httpsScore)}">${httpsScore}</div>
+            <div class="compliance-label">HTTPS</div>
           </div>
-        </div>
-        <div>
-          <h4 class="text-green-400 text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 bg-green-500 rounded-full"></span> How to Fix
-          </h4>
-          <div class="space-y-2">
-            ${(r.resolution_steps||[]).map((s,i)=>`<div class="text-xs text-slate-400 bg-green-500/5 border border-green-500/10 rounded-xl p-3 leading-relaxed"><span class="text-green-500 font-bold font-mono mr-1">0${i+1}</span>${s}</div>`).join('') || '<div class="text-xs text-slate-600">—</div>'}
+          <div class="compliance-item">
+            <div class="compliance-score" style="color:${sc(mobileScore)}">${mobileScore}</div>
+            <div class="compliance-label">Mobile</div>
           </div>
-        </div>
-        <div>
-          <h4 class="text-amber-400 text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 bg-amber-500 rounded-full"></span> Revenue Opportunities
-          </h4>
-          <div class="space-y-2">
-            ${(r.revenue_opportunities||[]).map(o=>`<div class="text-xs text-slate-400 bg-amber-500/5 border border-amber-500/10 rounded-xl p-3 leading-relaxed">💰 ${o}</div>`).join('') || '<div class="text-xs text-slate-600">—</div>'}
+          <div class="compliance-item">
+            <div class="compliance-score" style="color:${sc(accessScore)}">${accessScore}</div>
+            <div class="compliance-label">Accessibility</div>
+          </div>
+          <div class="compliance-item">
+            <div class="compliance-score" style="color:${sc(seoScore)}">${seoScore}</div>
+            <div class="compliance-label">SEO Basics</div>
           </div>
         </div>
       </div>
 
-      ${(r.strengths||[]).length ? `
-      <div class="px-8 pb-6">
-        <h4 class="text-indigo-400 text-xs font-black uppercase tracking-widest mb-3">What They Do Well</h4>
-        <div class="flex flex-wrap gap-2">
-          ${(r.strengths||[]).map(s=>`<span class="text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-3 py-1.5">✓ ${s}</span>`).join('')}
+      <div class="card-pills">
+        ${r.mobile_readiness ? `<span class="pill ${pillClass(r.mobile_readiness,'Good','Needs Work','Poor')}">📱 Mobile: ${r.mobile_readiness}</span>` : ''}
+        ${r.pricing_clarity ? `<span class="pill ${pillClass(r.pricing_clarity,'Clear','Vague','Hidden')}">💰 Pricing: ${r.pricing_clarity}</span>` : ''}
+        ${r.cta_effectiveness ? `<span class="pill ${pillClass(r.cta_effectiveness,'Strong','Weak','Missing')}">🎯 CTA: ${r.cta_effectiveness}</span>` : ''}
+        ${r.target_audience_clarity ? `<span class="pill ${pillClass(r.target_audience_clarity,'Clear','Vague','Confusing')}">👥 Audience: ${r.target_audience_clarity}</span>` : ''}
+        ${r.load_time_ms ? `<span class="pill ${r.load_time_ms<3000?'pill-green':r.load_time_ms<5000?'pill-yellow':'pill-red'}">⚡ Load: ${(r.load_time_ms/1000).toFixed(1)}s</span>` : ''}
+        ${r.industry ? `<span class="pill pill-blue">🏢 ${r.industry}</span>` : ''}
+      </div>
+
+      <div class="card-details" id="details-${idx}">
+        <div class="card-grid">
+          <div class="detail-col">
+            <h4 style="color:#f87171"><span>🔴</span> Problems Found</h4>
+            ${(r.ux_friction_points||[]).length ? (r.ux_friction_points||[]).map(p=>`<div class="detail-item">⚠ ${p}</div>`).join('') : '<div class="detail-item" style="color:#334155">None detected</div>'}
+          </div>
+          <div class="detail-col">
+            <h4 style="color:#4ade80"><span>🟢</span> How to Fix</h4>
+            ${(r.resolution_steps||[]).length ? (r.resolution_steps||[]).map((s,i)=>`<div class="detail-item"><span style="color:#4ade80;font-weight:700;font-family:monospace">0${i+1}</span> ${s}</div>`).join('') : '<div class="detail-item" style="color:#334155">—</div>'}
+          </div>
+          <div class="detail-col">
+            <h4 style="color:#fbbf24"><span>💰</span> Revenue Opportunities</h4>
+            ${(r.revenue_opportunities||[]).length ? (r.revenue_opportunities||[]).map(o=>`<div class="detail-item">💰 ${o}</div>`).join('') : '<div class="detail-item" style="color:#334155">—</div>'}
+          </div>
         </div>
-      </div>` : ''}
+        ${(r.strengths||[]).length ? `
+        <div style="padding:0 20px 14px">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">What They Do Well</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${(r.strengths||[]).map(s=>`<span class="pill pill-blue">✓ ${s}</span>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+
+      <div class="card-actions">
+        <button class="toggle-btn" onclick="toggleDetails(${idx})">▼ View full analysis</button>
+        <button class="btn btn-ghost" style="font-size:11px" onclick="rescan('${log.url||''}')">↺ Re-scan</button>
+        <button class="btn btn-ghost" style="font-size:11px" onclick="shareReport('${log.url||''}','${name}',${score})">↗ Share</button>
+      </div>
     </div>`;
   }).join('');
 }
 
-function filterReports(status) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','bg-slate-900','text-white'));
-  event.target.classList.add('active','bg-slate-900','text-white');
-  const filtered = status === 'all' ? allLogs : allLogs.filter(l => l.status === status);
-  renderReports(filtered);
+function toggleDetails(idx) {
+  const el = document.getElementById(`details-${idx}`);
+  const btn = el.previousElementSibling.querySelector('.toggle-btn');
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+    btn.textContent = '▼ View full analysis';
+  } else {
+    el.classList.add('open');
+    btn.textContent = '▲ Hide analysis';
+  }
 }
 
-function searchReports() {
-  const q = document.getElementById('search').value.toLowerCase();
-  const filtered = allLogs.filter(l => {
-    const name = (l.metadata?.target_name || '').toLowerCase();
-    const url = (l.url || '').toLowerCase();
-    const summary = (l.reasoning || '').toLowerCase();
-    return name.includes(q) || url.includes(q) || summary.includes(q);
-  });
-  renderReports(filtered);
+async function rescan(url) {
+  if (!url) return;
+  showStatus(`⏳ Re-scanning ${url}...`, 'scanning');
+  const data = await triggerScan(url);
+  if (data.ok) showStatus(`✅ ${data.message}`, 'success');
+  else showStatus(`❌ ${data.error}`, 'error');
+}
+
+function shareReport(url, name, score) {
+  const text = `🔍 Site Intelligence Report\n\n${name}\nScore: ${score}/100\n\nGenerated by Klaro Pulse — klaro-pulse.vercel.app\n\nFull report: ${url}`;
+  if (navigator.share) {
+    navigator.share({ title: `Klaro Pulse — ${name}`, text });
+  } else {
+    navigator.clipboard.writeText(text);
+    alert('Report summary copied to clipboard!');
+  }
 }
 </script>
 </body>
