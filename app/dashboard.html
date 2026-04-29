@@ -4,122 +4,142 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Klaro Pulse — Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; }
-body { font-family: 'Inter', sans-serif; background: #020617; color: #cbd5e1; margin: 0; }
-.sidebar { width: 220px; min-height: 100vh; background: #080e1c; border-right: 1px solid #1e293b; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; }
-.main { margin-left: 220px; padding: 36px 40px; min-height: 100vh; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; font-size: 13px; color: #64748b; cursor: pointer; border-radius: 8px; margin: 2px 8px; transition: all 0.15s; text-decoration: none; }
-.nav-item:hover { background: #1e293b; color: #e2e8f0; }
-.nav-item.active { background: #1e293b; color: #818cf8; }
-.card { background: #0d1629; border: 1px solid #1e293b; border-radius: 14px; padding: 22px; }
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
-.badge.passed { background: #052e16; color: #4ade80; border: 1px solid #166534; }
-.badge.failed { background: #1c0a0a; color: #f87171; border: 1px solid #7f1d1d; }
-.badge.running { background: #1c1505; color: #fbbf24; border: 1px solid #78350f; }
-.badge.pending { background: #111827; color: #475569; border: 1px solid #1e293b; }
-.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:50; align-items:center; justify-content:center; }
-.modal-bg.open { display:flex; }
-.modal { background:#0d1629; border:1px solid #1e293b; border-radius:20px; width:640px; max-height:82vh; overflow-y:auto; padding:32px; }
-input, select, textarea { background:#080e1c; border:1px solid #1e293b; border-radius:8px; padding:9px 13px; color:#e2e8f0; font-size:13px; width:100%; outline:none; font-family:'Inter',sans-serif; }
-input:focus, textarea:focus { border-color:#4f46e5; }
-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px; }
-.btn { padding:9px 18px; border-radius:9px; border:none; cursor:pointer; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; transition:all 0.15s; }
-.btn-primary { background:#4f46e5; color:white; }
-.btn-primary:hover { background:#4338ca; }
-.btn-ghost { background:transparent; color:#64748b; border:1px solid #1e293b; }
-.btn-ghost:hover { background:#1e293b; color:#e2e8f0; }
-.score { font-size:20px; font-weight:900; }
-.step-item { padding:12px 0; border-bottom:1px solid #0f1e35; display:flex; gap:12px; }
-.step-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+.sidebar{width:220px;min-height:100vh;background:#161b27;border-right:1px solid #2d3748;position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:10}
+.main{margin-left:220px;padding:32px 36px;min-height:100vh}
+.logo-area{padding:20px 18px 16px}
+.logo{font-size:17px;font-weight:900;color:white;letter-spacing:-0.5px}
+.logo span{color:#7c3aed}
+.logo-sub{font-size:9px;color:#4b5563;margin-top:1px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+nav{padding:6px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;color:#9ca3af;cursor:pointer;border-radius:8px;margin:2px 8px;transition:all 0.15s;text-decoration:none}
+.nav-item:hover{background:#1e2535;color:#e2e8f0}
+.nav-item.active{background:#1e2535;color:#a78bfa}
+.nav-item svg{flex-shrink:0}
+.plan-box{margin:12px;background:#0d1117;border:1px solid #2d3748;border-radius:10px;padding:12px}
+.plan-label{font-size:9px;color:#374151;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px}
+.plan-name{font-size:13px;font-weight:800;color:#7c3aed}
+.plan-usage{font-size:10px;color:#374151;margin-top:6px}
+.card{background:#161b27;border:1px solid #2d3748;border-radius:14px;padding:20px}
+.stat-card{background:#161b27;border:1px solid #2d3748;border-radius:12px;padding:18px}
+.stat-val{font-size:28px;font-weight:900}
+.stat-label{font-size:10px;color:#6b7280;margin-top:3px;text-transform:uppercase;letter-spacing:0.05em}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.04em}
+.badge.passed{background:#052e16;color:#4ade80;border:1px solid #14532d}
+.badge.failed{background:#1c0505;color:#f87171;border:1px solid #7f1d1d}
+.badge.running{background:#1c1505;color:#fbbf24;border:1px solid #78350f}
+.badge.pending{background:#111827;color:#6b7280;border:1px solid #1f2937}
+.section-label{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+.journey-card{background:#161b27;border:1px solid #2d3748;border-radius:12px;padding:18px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+.journey-card:hover{border-color:#4b5563}
+.journey-card.passed{border-left:3px solid #14532d}
+.journey-card.failed{border-left:3px solid #7f1d1d}
+.journey-card.pending{border-left:3px solid #2d3748}
+.step-item{padding:11px 0;border-bottom:1px solid #1f2937;display:flex;gap:10px;align-items:flex-start}
+.step-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.audit-score{background:#0d1117;border-radius:10px;padding:12px;text-align:center}
+.audit-score-val{font-size:22px;font-weight:900}
+.audit-score-label{font-size:9px;color:#6b7280;text-transform:uppercase;margin-top:2px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:50;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#161b27;border:1px solid #2d3748;border-radius:18px;width:620px;max-height:85vh;overflow-y:auto;padding:28px}
+input,select,textarea{background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color 0.15s}
+input:focus,textarea:focus{border-color:#7c3aed}
+label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px}
+.btn{padding:9px 18px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;transition:all 0.15s}
+.btn-primary{background:#7c3aed;color:white}
+.btn-primary:hover{background:#6d28d9}
+.btn-ghost{background:transparent;color:#9ca3af;border:1px solid #2d3748}
+.btn-ghost:hover{background:#1e2535;color:#e2e8f0}
+.btn-danger{background:transparent;color:#f87171;border:1px solid #7f1d1d}
+.btn-danger:hover{background:#1c0505}
+.hdr-actions{display:flex;gap:8px}
+.empty-state{text-align:center;padding:60px 20px;color:#4b5563}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:700;color:#6b7280;margin-bottom:6px}
+.empty-sub{font-size:13px}
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-  <div style="padding:22px 16px 16px;">
-    <div style="font-size:16px;font-weight:900;color:white;letter-spacing:-0.5px">KLARO <span style="color:#6366f1">PULSE</span></div>
-    <div style="font-size:10px;color:#1e3a5f;margin-top:1px;font-weight:600;letter-spacing:0.05em">AI QA PLATFORM</div>
+  <div class="logo-area">
+    <div class="logo">KLARO <span>PULSE</span></div>
+    <div class="logo-sub">AI QA Platform</div>
   </div>
-
-  <nav style="padding:4px 0;flex:1">
-    <a class="nav-item active" id="nav-journeys" onclick="showView('journeys',this)">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+  <nav>
+    <a class="nav-item active" onclick="showView('journeys',this)">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
       Journeys
     </a>
-    <a class="nav-item" id="nav-runs" onclick="showView('runs',this)">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <a class="nav-item" onclick="showView('runs',this)">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Test Runs
     </a>
-    <a class="nav-item" id="nav-audits" onclick="showView('audits',this)">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    <a class="nav-item" onclick="showView('audits',this)">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10"/></svg>
       Audit Scores
     </a>
-    <a class="nav-item" id="nav-reports" onclick="showView('reports',this)">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <a class="nav-item" onclick="showView('reports',this)">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Reports
     </a>
   </nav>
-
-  <div style="padding:12px;">
-    <div style="background:#080e1c;border:1px solid #1e293b;border-radius:10px;padding:12px;">
-      <div style="font-size:10px;color:#334155;font-weight:700;letter-spacing:0.05em;margin-bottom:3px">PLAN</div>
-      <div style="font-size:13px;font-weight:800;color:#818cf8">Growth · $499/mo</div>
-      <div style="font-size:11px;color:#334155;margin-top:6px" id="usage-label">—</div>
-    </div>
+  <div class="plan-box">
+    <div class="plan-label">Plan</div>
+    <div class="plan-name">Growth · $499/mo</div>
+    <div class="plan-usage" id="usage-label">Loading...</div>
   </div>
 </div>
 
 <div class="main">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
     <div>
-      <h1 style="font-size:22px;font-weight:900;color:white;margin:0" id="view-title">Journey Monitor</h1>
-      <p style="font-size:12px;color:#475569;margin:3px 0 0" id="view-sub">All active journeys — latest AI run results</p>
+      <h1 style="font-size:22px;font-weight:900;color:white" id="view-title">Journey Monitor</h1>
+      <p style="font-size:12px;color:#4b5563;margin-top:2px" id="view-sub">All active journeys — latest AI run results</p>
     </div>
-    <div id="hdr-actions" style="display:flex;gap:8px">
+    <div class="hdr-actions" id="hdr-actions">
       <button class="btn btn-ghost" id="run-btn" onclick="triggerRun()">▶ Run All Now</button>
-      <button class="btn btn-primary" onclick="openJourneyModal()">+ New Journey</button>
+      <button class="btn btn-primary" onclick="openNewJourney()">+ New Journey</button>
     </div>
   </div>
 
-  <div id="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;"></div>
+  <div id="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px"></div>
   <div id="view-content"></div>
 </div>
 
 <!-- New Journey Modal -->
 <div class="modal-bg" id="jModal">
   <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;color:white">Define New Journey</div>
-      <button onclick="closeModal('jModal')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px;line-height:1">✕</button>
+      <button onclick="closeModal('jModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="display:flex;flex-direction:column;gap:14px">
       <div><label>Journey Name</label><input id="j-name" placeholder="e.g. User Login Flow"/></div>
-      <div>
-        <label>Goal — Plain English</label>
-        <textarea id="j-goal" rows="2" placeholder="e.g. Verify a user can log in with valid credentials and reach the dashboard"></textarea>
-      </div>
+      <div><label>Goal — Plain English</label><textarea id="j-goal" rows="2" placeholder="e.g. Verify a user can log in and reach the dashboard"></textarea></div>
       <div><label>Target URL</label><input id="j-url" type="url" placeholder="https://your-app.com"/></div>
       <div><label>Tags (comma separated)</label><input id="j-tags" placeholder="smoke, auth, critical"/></div>
       <div>
-        <label>Steps — one per line, plain English</label>
-        <div style="font-size:11px;color:#475569;margin-bottom:6px">Describe each action as you would tell a human tester. The AI figures out the rest.</div>
-        <textarea id="j-steps" rows="7" placeholder="Navigate to the homepage&#10;Click the Sign In button&#10;Type the email address into the email field&#10;Type the password into the password field&#10;Click the Login button&#10;Verify the dashboard heading is visible&#10;Take a screenshot of the dashboard"></textarea>
+        <label>Steps — one per line</label>
+        <div style="font-size:11px;color:#4b5563;margin-bottom:6px">Describe each action as you would tell a human tester. AI figures out the rest.</div>
+        <textarea id="j-steps" rows="6" placeholder="Navigate to the homepage&#10;Click the Sign In button&#10;Enter email into the email field&#10;Enter password into the password field&#10;Click Login&#10;Verify the dashboard is visible"></textarea>
       </div>
-      <div style="background:#0a0f1e;border-radius:10px;padding:14px;">
-        <div style="font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:6px">QUICK TEMPLATES</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('login')">Login Flow</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('signup')">Sign Up</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('checkout')">Checkout</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('audit')">Full Site Audit</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="fillTemplate('nomadpilot')">NomadPilot Demo</button>
+      <div style="background:#0d1117;border-radius:10px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Quick Templates</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('login')">Login Flow</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('signup')">Sign Up</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('checkout')">Checkout</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('audit')">Full Site Audit</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillTpl('nomadpilot')">NomadPilot Demo</button>
         </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
         <button class="btn btn-ghost" onclick="closeModal('jModal')">Cancel</button>
         <button class="btn btn-primary" onclick="saveJourney()">Create Journey</button>
       </div>
@@ -127,444 +147,323 @@ label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase
   </div>
 </div>
 
-<!-- Run Detail Modal -->
-<div class="modal-bg" id="rModal">
-  <div class="modal" style="width:700px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div style="font-size:17px;font-weight:800;color:white" id="rModal-title">Run Detail</div>
-      <button onclick="closeModal('rModal')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px">✕</button>
-    </div>
-    <div id="rModal-body"></div>
-  </div>
-</div>
-
-<script>
-const DB_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
-const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZobnZjbHZ6eGt5Ym55YnFneWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc1MjIsImV4cCI6MjA5Mjk3MzUyMn0.toq9DNk257c58p2dNOvjc2vYBY7zClF2RY2tGv8m1VY';
-const { createClient } = supabase;
-const db = createClient(DB_URL, DB_KEY);
-
-const TEMPLATES = {
-  login: { name: 'User Login Flow', goal: 'Verify a user can log in with valid credentials and reach their dashboard', steps: 'Navigate to the homepage\nClick the Sign In or Login button\nType the test email into the email field\nType the password into the password field\nClick the Submit or Login button\nVerify the dashboard or account page is visible' },
-  signup: { name: 'User Sign Up Flow', goal: 'Verify a new user can create an account and reach onboarding', steps: 'Navigate to the homepage\nClick the Sign Up or Get Started button\nFill in the name field\nFill in the email field\nFill in the password field\nClick the Create Account button\nVerify the confirmation or welcome screen appears' },
-  checkout: { name: 'Checkout Flow', goal: 'Verify a user can add a product to cart and reach the payment step', steps: 'Navigate to the products page\nClick on the first product\nClick the Add to Cart button\nVerify the cart shows 1 item\nClick the Checkout button\nVerify the payment form is visible' },
-  audit: { name: 'Full Site Audit', goal: 'Audit all key public pages for accessibility, performance, security and UX quality', steps: 'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nTake a screenshot of the signup or contact page\nVerify no error messages are visible' },
-  nomadpilot: { name: 'NomadPilot Full Audit', goal: 'Audit all public pages of nomadpilot.app for accessibility, performance, security and UX quality', steps: 'Navigate to https://nomadpilot.app and wait for the homepage to load\nTake a screenshot of the full homepage\nVerify the main heading and hero section are visible\nScroll down to see the features section\nClick the Pricing link in the navigation\nTake a screenshot of the pricing page\nClick the Sign Up or Get Started button\nVerify the signup page is visible\nTake a screenshot of the signup flow' }
-};
-
-function scoreColor(s) {
-  if (s == null) return '#475569';
-  if (s >= 80) return '#4ade80';
-  if (s >= 60) return '#fbbf24';
-  return '#f87171';
-}
-
-function scoreLabel(s) {
-  if (s == null) return 'N/A';
-  if (s >= 80) return 'Good';
-  if (s >= 60) return 'Fair';
-  return 'Poor';
-}
-
-function ago(ts) {
-  if (!ts) return '—';
-  const m = Math.floor((Date.now() - new Date(ts)) / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  return Math.floor(h / 24) + 'd ago';
-}
-
-function badge(status) {
-  return '<span class="badge ' + status + '">' + status.toUpperCase() + '</span>';
-}
-
-function showView(view, el) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (el) el.classList.add('active');
-  if (view === 'journeys') loadJourneys();
-  else if (view === 'runs') loadRuns();
-  else if (view === 'audits') loadAudits();
-  else if (view === 'reports') loadReports();
-}
-
-async function loadStats() {
-  const [{ data: runs }, { data: journeys }] = await Promise.all([
-    db.from('test_runs').select('status').limit(200),
-    db.from('journeys').select('id').eq('is_active', true)
-  ]);
-  const passed = (runs || []).filter(r => r.status === 'passed').length;
-  const failed = (runs || []).filter(r => r.status === 'failed').length;
-  const total = (runs || []).length;
-  const rate = total ? Math.round(passed / total * 100) : 0;
-  document.getElementById('usage-label').textContent = total + ' runs total';
-  document.getElementById('stats-row').innerHTML = [
-    ['Active Journeys', journeys?.length || 0, 'white'],
-    ['Passed', passed, '#4ade80'],
-    ['Failed', failed, '#f87171'],
-    ['Pass Rate', rate + '%', scoreColor(rate)]
-  ].map(([label, val, color]) => `<div class="card"><div style="font-size:26px;font-weight:900;color:${color}">${val}</div><div style="font-size:10px;color:#475569;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em">${label}</div></div>`).join('');
-}
-
-async function loadJourneys() {
-  document.getElementById('view-title').textContent = 'Journey Monitor';
-  document.getElementById('view-sub').textContent = 'All active journeys — latest AI run results';
-  document.getElementById('hdr-actions').innerHTML = '<div style="display:flex;gap:8px"><button class="btn btn-ghost" id="run-btn" onclick="triggerRun()">▶ Run All Now</button><button class="btn btn-primary" onclick="openJourneyModal()">+ New Journey</button></div>';
-
-  // Load journeys and outcomes separately, then merge
-  const [{ data: journeys }, { data: outcomes }, { data: runs }] = await Promise.all([
-    db.from('journeys').select('*').eq('is_active', true).order('created_at', { ascending: false }),
-    db.from('outcomes').select('*').order('created_at', { ascending: false }),
-    db.from('test_runs').select('*').order('started_at', { ascending: false })
-  ]);
-
-  const content = document.getElementById('view-content');
-  if (!journeys?.length) {
-    content.innerHTML = '<div class="card" style="text-align:center;padding:48px;color:#334155"><div style="font-size:32px;margin-bottom:12px">🚀</div><div style="font-size:16px;font-weight:700;margin-bottom:6px;color:#475569">No journeys yet</div><div style="font-size:13px">Click "+ New Journey" to define your first AI test</div></div>';
-    return;
-  }
-
-  // Map latest outcome per journey
-  const outcomeMap = {};
-  (outcomes || []).forEach(o => { if (!outcomeMap[o.journey_id]) outcomeMap[o.journey_id] = o; });
-  const runMap = {};
-  (runs || []).forEach(r => { if (!runMap[r.id]) runMap[r.id] = r; });
-
-  content.innerHTML = journeys.map(j => {
-    const o = outcomeMap[j.id];
-    const r = o ? runMap[o.run_id] : null;
-    const tags = (j.tags || []).map(t => `<span style="font-size:10px;background:#1e293b;color:#94a3b8;padding:2px 8px;border-radius:20px">${t}</span>`).join(' ');
-    const borderColor = !o ? '#1e293b' : o.passed ? '#166534' : '#7f1d1d';
-
-    if (!o) return `
-      <div class="card" style="margin-bottom:10px;border-left:4px solid ${borderColor}">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:15px;font-weight:800;color:white;margin-bottom:4px">${j.name} ${tags}</div>
-            <div style="font-size:12px;color:#475569">${j.goal}</div>
-            <div style="font-size:11px;color:#1e3a5f;margin-top:6px">${j.target_url}</div>
-          </div>
-          <div style="text-align:right">
-            <span class="badge pending">AWAITING RUN</span>
-            <div style="font-size:11px;color:#334155;margin-top:6px">Push to GitHub to trigger</div>
-          </div>
-        </div>
-      </div>`;
-
-    const dur = r?.duration_ms ? (r.duration_ms/1000).toFixed(1)+'s' : '—';
-    const sha = r?.commit_sha ? r.commit_sha.slice(0,7) : '—';
-
-    return `
-      <div class="card" style="margin-bottom:10px;border-left:4px solid ${borderColor};cursor:pointer" onclick="openRunModal('${o.run_id}')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
-              <span style="font-size:15px;font-weight:800;color:white">${j.name}</span>
-              ${tags}
-            </div>
-            <div style="font-size:12px;color:#64748b;margin-bottom:10px">${j.goal}</div>
-            <div style="display:flex;gap:16px;font-size:11px;color:#334155;flex-wrap:wrap">
-              <span>✅ ${o.passed_steps} passed</span>
-              <span>❌ ${o.failed_steps} failed</span>
-              ${o.healed_steps > 0 ? '<span style="color:#fb923c">⚡ ' + o.healed_steps + ' self-healed</span>' : ''}
-              <span>${ago(r?.started_at)}</span>
-              <span style="font-family:monospace">${sha}</span>
-              <span>${dur}</span>
-            </div>
-            ${o.ai_summary ? '<div style="font-size:12px;color:#4a6fa5;margin-top:8px;background:#080e1c;padding:8px 12px;border-radius:8px;line-height:1.6">💬 ' + o.ai_summary + '</div>' : ''}
-          </div>
-          <div style="flex-shrink:0;text-align:right">
-            ${badge(o.passed ? 'passed' : 'failed')}
-            <div style="font-size:11px;color:#334155;margin-top:6px">${(o.passed_steps||0)}/${(o.total_steps||0)} steps</div>
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <button onclick="event.stopPropagation();openEditModal('${j.id}','${j.name.replace(/'/g,\"\\'\")}','${j.goal.replace(/'/g,\"\\'\")}','${j.target_url}')" style="font-size:10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
-              <span style="font-size:11px;color:#475569;margin-top:2px">View →</span>
-            </div>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function loadRuns() {
-  document.getElementById('view-title').textContent = 'All Test Runs';
-  document.getElementById('view-sub').textContent = 'Every run across all journeys, newest first';
-  document.getElementById('hdr-actions').innerHTML = '';
-
-  const [{ data: runs }, { data: journeys }, { data: outcomes }] = await Promise.all([
-    db.from('test_runs').select('*').order('started_at', { ascending: false }).limit(50),
-    db.from('journeys').select('id,name'),
-    db.from('outcomes').select('*')
-  ]);
-
-  const jMap = {};
-  (journeys||[]).forEach(j => jMap[j.id] = j.name);
-  const oMap = {};
-  (outcomes||[]).forEach(o => oMap[o.run_id] = o);
-
-  const content = document.getElementById('view-content');
-  if (!runs?.length) { content.innerHTML = '<div class="card" style="color:#475569;font-size:13px">No runs yet. Push to GitHub or click Run workflow in GitHub Actions.</div>'; return; }
-
-  content.innerHTML = runs.map(r => {
-    const o = oMap[r.id];
-    const dur = r.duration_ms ? (r.duration_ms/1000).toFixed(1)+'s' : '—';
-    return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="openRunModal('${r.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            ${badge(r.status)}
-            <span style="font-size:14px;font-weight:700;color:white">${jMap[r.journey_id] || 'Unknown'}</span>
-          </div>
-          <div style="font-size:11px;color:#475569">${ago(r.started_at)} · ${dur} · <span style="font-family:monospace">${r.commit_sha?.slice(0,7)||'—'}</span> · ${r.branch||'main'} ${o ? '· '+o.passed_steps+'/'+o.total_steps+' steps' : ''} ${o?.healed_steps > 0 ? '· ⚡ '+o.healed_steps+' healed' : ''}</div>
-        </div>
-        <span style="font-size:11px;color:#334155">View →</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadAudits() {
-  document.getElementById('view-title').textContent = 'Audit Scores';
-  document.getElementById('view-sub').textContent = 'Accessibility · Performance · Security · AI Vision — per run';
-  document.getElementById('hdr-actions').innerHTML = '';
-
-  const [{ data: audits }, { data: runs }, { data: journeys }] = await Promise.all([
-    db.from('audit_results').select('*').order('created_at', { ascending: false }).limit(80),
-    db.from('test_runs').select('id,started_at,journey_id'),
-    db.from('journeys').select('id,name')
-  ]);
-
-  const runMap = {};
-  (runs||[]).forEach(r => runMap[r.id] = r);
-  const jMap = {};
-  (journeys||[]).forEach(j => jMap[j.id] = j.name);
-
-  // Group by run
-  const byRun = {};
-  (audits||[]).forEach(a => {
-    if (!byRun[a.run_id]) byRun[a.run_id] = { run: runMap[a.run_id], audits: [] };
-    byRun[a.run_id].audits.push(a);
-  });
-
-  const content = document.getElementById('view-content');
-  if (!Object.keys(byRun).length) { content.innerHTML = '<div class="card" style="color:#475569;font-size:13px">No audit data yet. Run a journey first.</div>'; return; }
-
-  content.innerHTML = Object.entries(byRun).map(([runId, row]) => {
-    const jName = row.run ? jMap[row.run.journey_id] : 'Unknown';
-    const scoreCards = row.audits.map(a => `
-      <div style="text-align:center;background:#080e1c;border-radius:10px;padding:10px 14px">
-        <div class="score" style="color:${scoreColor(a.score)}">${a.score ?? '—'}</div>
-        <div style="font-size:10px;color:#475569;text-transform:capitalize;margin-top:2px">${a.audit_type.replace('_',' ')}</div>
-        <div style="font-size:9px;color:${scoreColor(a.score)};margin-top:1px">${scoreLabel(a.score)}</div>
-      </div>`).join('');
-
-    const ai = row.audits.find(a => a.audit_type === 'ai_vision');
-
-    return `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
-        <div>
-          <div style="font-size:14px;font-weight:800;color:white;margin-bottom:2px">${jName}</div>
-          <div style="font-size:11px;color:#475569">${ago(row.run?.started_at)}</div>
-        </div>
-        <div style="display:flex;gap:8px">${scoreCards}</div>
-      </div>
-      ${ai?.ai_narrative ? '<div style="font-size:12px;color:#64748b;background:#080e1c;border-radius:8px;padding:10px 14px;line-height:1.7">💬 ' + ai.ai_narrative + '</div>' : ''}
-    </div>`;
-  }).join('');
-}
-
-async function loadReports() {
-  document.getElementById('view-title').textContent = 'Audit Reports';
-  document.getElementById('view-sub').textContent = 'Downloadable reports for each completed run';
-  document.getElementById('hdr-actions').innerHTML = '';
-
-  const [{ data: reports }, { data: journeys }] = await Promise.all([
-    db.from('reports').select('*').order('generated_at', { ascending: false }).limit(30),
-    db.from('journeys').select('id,name')
-  ]);
-
-  const jMap = {};
-  (journeys||[]).forEach(j => jMap[j.id] = j.name);
-
-  const content = document.getElementById('view-content');
-  if (!reports?.length) { content.innerHTML = '<div class="card" style="color:#475569;font-size:13px">No reports yet. Reports are generated after each run completes.</div>'; return; }
-
-  content.innerHTML = reports.map(r => `
-    <div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <div>
-        <div style="font-size:14px;font-weight:700;color:white;margin-bottom:3px">${jMap[r.journey_id] || 'Unknown'}</div>
-        <div style="font-size:11px;color:#475569">${ago(r.generated_at)}</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        ${r.html_url ? '<a href="'+r.html_url+'" target="_blank" class="btn btn-ghost" style="font-size:12px;text-decoration:none">View Report</a>' : ''}
-        ${r.report_url ? '<a href="'+r.report_url+'" target="_blank" class="btn btn-primary" style="font-size:12px;text-decoration:none">Download PDF</a>' : ''}
-      </div>
-    </div>`).join('');
-}
-
-async function openRunModal(runId) {
-  document.getElementById('rModal').classList.add('open');
-  document.getElementById('rModal-body').innerHTML = '<div style="text-align:center;padding:40px;color:#475569;font-size:13px">Loading run data...</div>';
-
-  const [{ data: steps }, { data: outcome }, { data: audits }, { data: report }] = await Promise.all([
-    db.from('step_results').select('*').eq('run_id', runId).order('step_index'),
-    db.from('outcomes').select('*').eq('run_id', runId).maybeSingle(),
-    db.from('audit_results').select('*').eq('run_id', runId),
-    db.from('reports').select('*').eq('run_id', runId).maybeSingle()
-  ]);
-
-  if (outcome) {
-    document.getElementById('rModal-title').textContent = outcome.passed ? '✅ Journey Passed' : '❌ Journey Failed';
-  }
-
-  const summaryCards = outcome ? `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
-      ${[
-        ['Result', outcome.passed ? 'PASS' : 'FAIL', outcome.passed ? '#4ade80' : '#f87171'],
-        ['Steps', outcome.passed_steps+'/'+outcome.total_steps, 'white'],
-        ['Self-Healed', outcome.healed_steps||0, '#fb923c'],
-        ['Failed', outcome.failed_steps, '#f87171']
-      ].map(([l,v,c]) => `<div style="background:#080e1c;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#475569;margin-top:2px;text-transform:uppercase;letter-spacing:0.05em">${l}</div></div>`).join('')}
-    </div>
-    ${outcome.ai_summary ? '<div style="font-size:12px;color:#64748b;background:#080e1c;padding:10px 14px;border-radius:8px;margin-bottom:18px;line-height:1.7">💬 '+outcome.ai_summary+'</div>' : ''}` : '';
-
-  const stepsHtml = (steps||[]).map((s,i) => `
-    <div class="step-item">
-      <div class="step-dot" style="background:${s.status==='passed'?'#4ade80':'#f87171'}"></div>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
-          <span style="font-size:13px;font-weight:700;color:${s.status==='passed'?'#e2e8f0':'#fca5a5'}">${s.step_description}</span>
-          ${s.heal_attempts > 0 ? '<span style="font-size:9px;background:#451a03;color:#fb923c;border:1px solid #9a3412;padding:1px 7px;border-radius:20px;font-weight:700">⚡ SELF-HEALED</span>' : ''}
-        </div>
-        ${s.ai_reasoning ? '<div style="font-size:11px;color:#475569;font-style:italic;margin-bottom:4px">"'+s.ai_reasoning+'"</div>' : ''}
-        ${s.error_message ? '<div style="font-size:11px;color:#f87171;background:#1c0a0a;padding:5px 9px;border-radius:6px;margin-bottom:4px">'+s.error_message+'</div>' : ''}
-        ${s.screenshot_url ? '<img src="'+s.screenshot_url+'" style="width:100%;border-radius:8px;margin-top:6px;border:1px solid #1e293b" loading="lazy"/>' : ''}
-      </div>
-      <div style="font-size:10px;color:#1e3a5f;white-space:nowrap;padding-top:2px">${s.duration_ms||0}ms</div>
-    </div>`).join('');
-
-  const auditHtml = (audits||[]).length ? `
-    <div style="margin-top:20px">
-      <div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Audit Scores</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-        ${(audits||[]).map(a => `<div style="background:#080e1c;border-radius:8px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:${scoreColor(a.score)}">${a.score??'—'}</div><div style="font-size:9px;color:#475569;text-transform:capitalize;margin-top:2px">${a.audit_type.replace('_',' ')}</div><div style="font-size:9px;color:${scoreColor(a.score)};margin-top:1px">${scoreLabel(a.score)}</div></div>`).join('')}
-      </div>
-      ${(audits||[]).find(a=>a.ai_narrative) ? '<div style="font-size:12px;color:#64748b;background:#080e1c;padding:10px 14px;border-radius:8px;margin-top:10px;line-height:1.7">💬 '+(audits.find(a=>a.ai_narrative)?.ai_narrative||'')+'</div>' : ''}
-    </div>` : '';
-
-  const reportLinks = report ? `
-    <div style="display:flex;gap:8px;margin-top:20px">
-      ${report.html_url ? '<a href="'+report.html_url+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px">View Full Report</a>' : ''}
-      ${report.report_url ? '<a href="'+report.report_url+'" target="_blank" class="btn btn-primary" style="text-decoration:none;font-size:12px">Download PDF</a>' : ''}
-    </div>` : '';
-
-  document.getElementById('rModal-body').innerHTML = summaryCards +
-    '<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Step by Step</div>' +
-    stepsHtml + auditHtml + reportLinks;
-}
-
-function fillTemplate(key) {
-  const t = TEMPLATES[key];
-  document.getElementById('j-name').value = t.name;
-  document.getElementById('j-goal').value = t.goal;
-  document.getElementById('j-steps').value = t.steps;
-}
-
-function openJourneyModal() { document.getElementById('jModal').classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-async function saveJourney() {
-  const name = document.getElementById('j-name').value.trim();
-  const goal = document.getElementById('j-goal').value.trim();
-  const url = document.getElementById('j-url').value.trim();
-  const tags = document.getElementById('j-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const stepsRaw = document.getElementById('j-steps').value.trim();
-  if (!name||!goal||!url) return alert('Please fill in name, goal and URL.');
-  const steps = stepsRaw.split('\n').filter(s=>s.trim()).map((s,i) => ({ action:'ai_decide', description:s.trim(), index:i }));
-  const { data: customer } = await db.from('customers').select('id').limit(1).maybeSingle();
-  const { error } = await db.from('journeys').insert({ customer_id:customer?.id, name, goal, target_url:url, steps, tags, is_active:true });
-  if (error) return alert('Error: '+error.message);
-  closeModal('jModal');
-  document.getElementById('nav-journeys').click();
-}
-
-// Init
-loadStats();
-loadJourneys();
-setInterval(loadStats, 30000);
-</script>
-
 <!-- Edit Journey Modal -->
 <div class="modal-bg" id="eModal">
   <div class="modal" style="width:560px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;color:white">Edit Journey</div>
-      <button onclick="closeModal('eModal')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px">✕</button>
+      <button onclick="closeModal('eModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
     </div>
     <input type="hidden" id="e-id"/>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div><label>Journey Name</label><input id="e-name"/></div>
+      <div><label>Name</label><input id="e-name"/></div>
       <div><label>Goal</label><textarea id="e-goal" rows="2"></textarea></div>
       <div><label>Target URL</label><input id="e-url" type="url"/></div>
-      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px">
-        <button class="btn btn-ghost" style="color:#f87171;border-color:#7f1d1d" onclick="deleteJourney()">Delete Journey</button>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <button class="btn btn-danger" onclick="deleteJourney()">Delete Journey</button>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost" onclick="closeModal('eModal')">Cancel</button>
-          <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+          <button class="btn btn-primary" onclick="saveEdit()">Save</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Run Detail Modal -->
+<div class="modal-bg" id="rModal">
+  <div class="modal" style="width:700px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:800;color:white" id="r-title">Run Detail</div>
+      <button onclick="closeModal('rModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div id="r-body"></div>
+  </div>
+</div>
+
 <script>
-function openEditModal(id, name, goal, url) {
-  document.getElementById('e-id').value = id;
-  document.getElementById('e-name').value = name;
-  document.getElementById('e-goal').value = goal;
-  document.getElementById('e-url').value = url;
+const SB_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZobnZjbHZ6eGt5Ym55YnFneWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc1MjIsImV4cCI6MjA5Mjk3MzUyMn0.toq9DNk257c58p2dNOvjc2vYBY7zClF2RY2tGv8m1VY';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+const TPLS = {
+  login:{ name:'User Login Flow', goal:'Verify a user can log in with valid credentials and reach the dashboard', steps:'Navigate to the homepage\nClick the Sign In or Login button\nEnter email into the email field\nEnter password into the password field\nClick the Login button\nVerify the dashboard or account page is visible' },
+  signup:{ name:'User Sign Up Flow', goal:'Verify a new user can create an account and reach onboarding', steps:'Navigate to the homepage\nClick the Sign Up or Get Started button\nFill in the name field\nFill in the email field\nFill in the password field\nClick Create Account\nVerify the confirmation or welcome screen appears' },
+  checkout:{ name:'Checkout Flow', goal:'Verify a user can add a product to cart and reach payment', steps:'Navigate to the products page\nClick on the first product\nClick Add to Cart\nVerify cart shows 1 item\nClick Checkout\nVerify the payment form is visible' },
+  audit:{ name:'Full Site Audit', goal:'Audit all key public pages for accessibility, performance, security and UX quality', steps:'Navigate to the homepage and take a screenshot\nScroll down to see the full homepage\nClick the Pricing page link\nTake a screenshot of the pricing page\nClick the Sign Up or Contact link\nVerify no error messages are visible' },
+  nomadpilot:{ name:'NomadPilot Full Audit', goal:'Audit all public pages of nomadpilot.app for accessibility, performance, security and UX quality', steps:'Navigate to https://nomadpilot.app and wait for the homepage to load\nTake a screenshot of the full homepage\nVerify the main heading is visible\nScroll down to see the features section\nClick the Pricing link\nTake a screenshot of the pricing page\nClick the Sign Up button\nVerify the signup page is visible' }
+};
+
+function sc(s){ return s>=80?'#4ade80':s>=60?'#fbbf24':'#f87171' }
+function ago(ts){ if(!ts)return'—'; const m=Math.floor((Date.now()-new Date(ts))/60000); if(m<1)return'just now'; if(m<60)return m+'m ago'; if(m<1440)return Math.floor(m/60)+'h ago'; return Math.floor(m/1440)+'d ago'; }
+function badge(s){ return `<span class="badge ${s}">${s.toUpperCase()}</span>` }
+function closeModal(id){ document.getElementById(id).classList.remove('open') }
+function openNewJourney(){ document.getElementById('jModal').classList.add('open') }
+function fillTpl(k){ const t=TPLS[k]; document.getElementById('j-name').value=t.name; document.getElementById('j-goal').value=t.goal; document.getElementById('j-steps').value=t.steps; }
+
+function showView(v, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(v==='journeys') loadJourneys();
+  else if(v==='runs') loadRuns();
+  else if(v==='audits') loadAudits();
+  else if(v==='reports') loadReports();
+}
+
+async function loadStats(){
+  const [{data:runs},{data:journeys}] = await Promise.all([
+    db.from('test_runs').select('status').limit(200),
+    db.from('journeys').select('id').eq('is_active',true)
+  ]);
+  const passed=(runs||[]).filter(r=>r.status==='passed').length;
+  const failed=(runs||[]).filter(r=>r.status==='failed').length;
+  const total=(runs||[]).length;
+  const rate=total?Math.round(passed/total*100):0;
+  document.getElementById('usage-label').textContent=total+' runs total';
+  document.getElementById('stats-row').innerHTML=[
+    ['Active Journeys',(journeys||[]).length,'#a78bfa'],
+    ['Passed',passed,'#4ade80'],
+    ['Failed',failed,'#f87171'],
+    ['Pass Rate',rate+'%',sc(rate)]
+  ].map(([l,v,c])=>`<div class="stat-card"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-label">${l}</div></div>`).join('');
+}
+
+async function loadJourneys(){
+  document.getElementById('view-title').textContent='Journey Monitor';
+  document.getElementById('view-sub').textContent='All active journeys — latest AI run results';
+  document.getElementById('hdr-actions').innerHTML=`<button class="btn btn-ghost" id="run-btn" onclick="triggerRun()">▶ Run All Now</button><button class="btn btn-primary" onclick="openNewJourney()">+ New Journey</button>`;
+
+  const [{data:journeys},{data:outcomes},{data:runs}] = await Promise.all([
+    db.from('journeys').select('*').eq('is_active',true).order('created_at',{ascending:false}),
+    db.from('outcomes').select('*').order('created_at',{ascending:false}),
+    db.from('test_runs').select('*').order('started_at',{ascending:false})
+  ]);
+
+  const oMap={}, rMap={};
+  (outcomes||[]).forEach(o=>{ if(!oMap[o.journey_id]) oMap[o.journey_id]=o; });
+  (runs||[]).forEach(r=>{ if(!rMap[r.id]) rMap[r.id]=r; });
+
+  const content=document.getElementById('view-content');
+  if(!(journeys||[]).length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-icon">🚀</div><div class="empty-title">No journeys yet</div><div class="empty-sub">Click "+ New Journey" to define your first AI test</div></div>`;
+    return;
+  }
+
+  content.innerHTML=(journeys||[]).map(j=>{
+    const o=oMap[j.id], r=o?rMap[o.run_id]:null;
+    const tags=(j.tags||[]).map(t=>`<span style="font-size:10px;background:#1e2535;color:#6b7280;padding:2px 8px;border-radius:20px">${t}</span>`).join(' ');
+    const cls=!o?'pending':o.passed?'passed':'failed';
+    const dur=r?.duration_ms?(r.duration_ms/1000).toFixed(1)+'s':'—';
+    const sha=r?.commit_sha?r.commit_sha.slice(0,7):'—';
+    return `<div class="journey-card ${cls}" onclick="openRunModal('${o?.run_id||''}','${j.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+            <span style="font-size:15px;font-weight:800;color:white">${j.name}</span>${tags}
+          </div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:8px">${j.goal}</div>
+          ${o?`<div style="display:flex;gap:14px;font-size:11px;color:#4b5563;flex-wrap:wrap">
+            <span>✅ ${o.passed_steps} passed</span>
+            <span>❌ ${o.failed_steps} failed</span>
+            ${o.healed_steps>0?`<span style="color:#fb923c">⚡ ${o.healed_steps} healed</span>`:''}
+            <span>${ago(r?.started_at)}</span>
+            <span style="font-family:monospace">${sha}</span>
+            <span>${dur}</span>
+          </div>`:`<div style="font-size:11px;color:#374151">Push to GitHub to trigger first run</div>`}
+          ${o?.ai_summary?`<div style="font-size:11px;color:#4b5563;margin-top:6px;background:#0d1117;padding:7px 10px;border-radius:7px;line-height:1.6">💬 ${o.ai_summary}</div>`:''}
+        </div>
+        <div style="flex-shrink:0;text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          ${o?badge(o.passed?'passed':'failed'):badge('pending')}
+          <div style="display:flex;gap:5px">
+            <button onclick="event.stopPropagation();openEditModal('${j.id}','${j.name.replace(/'/g,"\\'")}','${j.goal.replace(/'/g,"\\'")}','${j.target_url}')" style="font-size:10px;background:#1e2535;border:1px solid #2d3748;color:#9ca3af;padding:3px 9px;border-radius:5px;cursor:pointer">Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadRuns(){
+  document.getElementById('view-title').textContent='All Test Runs';
+  document.getElementById('view-sub').textContent='Every run, newest first';
+  document.getElementById('hdr-actions').innerHTML='';
+  const [{data:runs},{data:journeys},{data:outcomes}] = await Promise.all([
+    db.from('test_runs').select('*').order('started_at',{ascending:false}).limit(50),
+    db.from('journeys').select('id,name'),
+    db.from('outcomes').select('*')
+  ]);
+  const jMap={}, oMap={};
+  (journeys||[]).forEach(j=>jMap[j.id]=j.name);
+  (outcomes||[]).forEach(o=>oMap[o.run_id]=o);
+  const content=document.getElementById('view-content');
+  if(!(runs||[]).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">🏃</div><div class="empty-title">No runs yet</div><div class="empty-sub">Push to GitHub or click Run All Now to trigger your first run</div></div>`; return; }
+  content.innerHTML=(runs||[]).map(r=>{
+    const o=oMap[r.id], dur=r.duration_ms?(r.duration_ms/1000).toFixed(1)+'s':'—';
+    return `<div class="journey-card" style="cursor:pointer" onclick="openRunModal('${r.id}','')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${badge(r.status)}<span style="font-size:14px;font-weight:700;color:white">${jMap[r.journey_id]||'Unknown'}</span></div>
+          <div style="font-size:11px;color:#4b5563">${ago(r.started_at)} · ${dur} · <span style="font-family:monospace">${r.commit_sha?.slice(0,7)||'—'}</span> · ${r.branch||'main'}${o?' · '+o.passed_steps+'/'+o.total_steps+' steps':''}</div>
+        </div>
+        <span style="font-size:11px;color:#374151">View →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAudits(){
+  document.getElementById('view-title').textContent='Audit Scores';
+  document.getElementById('view-sub').textContent='Accessibility · Performance · Security · AI Vision';
+  document.getElementById('hdr-actions').innerHTML='';
+  const [{data:audits},{data:runs},{data:journeys}] = await Promise.all([
+    db.from('audit_results').select('*').order('created_at',{ascending:false}).limit(80),
+    db.from('test_runs').select('id,started_at,journey_id'),
+    db.from('journeys').select('id,name')
+  ]);
+  const rMap={}, jMap={};
+  (runs||[]).forEach(r=>rMap[r.id]=r);
+  (journeys||[]).forEach(j=>jMap[j.id]=j.name);
+  const byRun={};
+  (audits||[]).forEach(a=>{ if(!byRun[a.run_id]) byRun[a.run_id]={run:rMap[a.run_id],audits:[]}; byRun[a.run_id].audits.push(a); });
+  const content=document.getElementById('view-content');
+  if(!Object.keys(byRun).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No audit data yet</div><div class="empty-sub">Run a journey to generate audit scores</div></div>`; return; }
+  content.innerHTML=Object.entries(byRun).map(([rid,row])=>{
+    const jn=row.run?jMap[row.run.journey_id]:'Unknown';
+    const scores=row.audits.map(a=>`<div class="audit-score"><div class="audit-score-val" style="color:${sc(a.score||0)}">${a.score??'—'}</div><div class="audit-score-label">${a.audit_type.replace('_',' ')}</div></div>`).join('');
+    const ai=row.audits.find(a=>a.audit_type==='ai_vision');
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px">
+        <div><div style="font-size:14px;font-weight:800;color:white;margin-bottom:2px">${jn}</div><div style="font-size:11px;color:#4b5563">${ago(row.run?.started_at)}</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;min-width:220px">${scores}</div>
+      </div>
+      ${ai?.ai_narrative?`<div style="font-size:12px;color:#6b7280;background:#0d1117;border-radius:8px;padding:10px 12px;line-height:1.7">💬 ${ai.ai_narrative}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function loadReports(){
+  document.getElementById('view-title').textContent='Reports';
+  document.getElementById('view-sub').textContent='Downloadable audit reports per run';
+  document.getElementById('hdr-actions').innerHTML='';
+  const [{data:reports},{data:journeys}] = await Promise.all([
+    db.from('reports').select('*').order('generated_at',{ascending:false}).limit(30),
+    db.from('journeys').select('id,name')
+  ]);
+  const jMap={}; (journeys||[]).forEach(j=>jMap[j.id]=j.name);
+  const content=document.getElementById('view-content');
+  if(!(reports||[]).length){ content.innerHTML=`<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No reports yet</div><div class="empty-sub">Reports are generated after each run completes</div></div>`; return; }
+  content.innerHTML=(reports||[]).map(r=>`<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <div><div style="font-size:14px;font-weight:700;color:white;margin-bottom:3px">${jMap[r.journey_id]||'Unknown'}</div><div style="font-size:11px;color:#4b5563">${ago(r.generated_at)}</div></div>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      ${r.html_url?`<a href="${r.html_url}" target="_blank" class="btn btn-ghost" style="font-size:12px;text-decoration:none">View Report</a>`:''}
+      ${r.report_url?`<a href="${r.report_url}" target="_blank" class="btn btn-primary" style="font-size:12px;text-decoration:none">Download PDF</a>`:'<span style="font-size:11px;color:#374151">PDF pending</span>'}
+    </div>
+  </div>`).join('');
+}
+
+async function openRunModal(runId, journeyId){
+  if(!runId) return;
+  document.getElementById('rModal').classList.add('open');
+  document.getElementById('r-body').innerHTML=`<div style="text-align:center;padding:40px;color:#4b5563;font-size:13px">Loading...</div>`;
+  const [{data:steps},{data:outcome},{data:audits},{data:report}] = await Promise.all([
+    db.from('step_results').select('*').eq('run_id',runId).order('step_index'),
+    db.from('outcomes').select('*').eq('run_id',runId).maybeSingle(),
+    db.from('audit_results').select('*').eq('run_id',runId),
+    db.from('reports').select('*').eq('run_id',runId).maybeSingle()
+  ]);
+  document.getElementById('r-title').textContent=outcome?(outcome.passed?'✅ Journey Passed':'❌ Journey Failed'):'Run Detail';
+  const summary=outcome?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    ${[['Result',outcome.passed?'PASS':'FAIL',outcome.passed?'#4ade80':'#f87171'],['Steps',outcome.passed_steps+'/'+outcome.total_steps,'white'],['Healed',outcome.healed_steps||0,'#fb923c'],['Failed',outcome.failed_steps,'#f87171']].map(([l,v,c])=>`<div style="background:#0d1117;border-radius:8px;padding:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#4b5563;margin-top:2px;text-transform:uppercase">${l}</div></div>`).join('')}
+  </div>${outcome.ai_summary?`<div style="font-size:12px;color:#6b7280;background:#0d1117;padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.7">💬 ${outcome.ai_summary}</div>`:'`':''}
+  `:'';
+  const stepsHtml=(steps||[]).map((s,i)=>`<div class="step-item">
+    <div class="step-dot" style="background:${s.status==='passed'?'#4ade80':'#f87171'}"></div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:${s.status==='passed'?'#e2e8f0':'#fca5a5'}">${s.step_description}</span>
+        ${s.heal_attempts>0?'<span style="font-size:9px;background:#451a03;color:#fb923c;border:1px solid #9a3412;padding:1px 7px;border-radius:20px;font-weight:700">⚡ HEALED</span>':''}
+      </div>
+      ${s.ai_reasoning?`<div style="font-size:11px;color:#4b5563;font-style:italic;margin-bottom:3px">"${s.ai_reasoning}"</div>`:''}
+      ${s.error_message?`<div style="font-size:11px;color:#f87171;background:#1c0505;padding:4px 8px;border-radius:5px;margin-bottom:3px">${s.error_message}</div>`:''}
+      ${s.screenshot_url?`<img src="${s.screenshot_url}" style="width:100%;border-radius:7px;margin-top:6px;border:1px solid #2d3748" loading="lazy"/>`:''}
+    </div>
+    <div style="font-size:10px;color:#374151;white-space:nowrap">${s.duration_ms||0}ms</div>
+  </div>`).join('');
+  const auditHtml=(audits||[]).length?`<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px">Audit Scores</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      ${(audits||[]).map(a=>`<div class="audit-score"><div class="audit-score-val" style="color:${sc(a.score||0)}">${a.score??'—'}</div><div class="audit-score-label">${a.audit_type.replace('_',' ')}</div></div>`).join('')}
+    </div>
+    ${(audits||[]).find(a=>a.ai_narrative)?`<div style="font-size:12px;color:#6b7280;background:#0d1117;padding:10px 12px;border-radius:8px;margin-top:10px;line-height:1.7">💬 ${(audits.find(a=>a.ai_narrative)||{}).ai_narrative||''}</div>`:''}
+  `:'';
+  const reportLinks=report?`<div style="display:flex;gap:8px;margin-top:16px">
+    ${report.html_url?`<a href="${report.html_url}" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px">View Report</a>`:''}
+    ${report.report_url?`<a href="${report.report_url}" target="_blank" class="btn btn-primary" style="text-decoration:none;font-size:12px">Download PDF</a>`:''}
+  </div>`:'';
+  document.getElementById('r-body').innerHTML=summary+`<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Steps</div>`+stepsHtml+auditHtml+reportLinks;
+}
+
+function openEditModal(id,name,goal,url){
+  document.getElementById('e-id').value=id;
+  document.getElementById('e-name').value=name;
+  document.getElementById('e-goal').value=goal;
+  document.getElementById('e-url').value=url;
   document.getElementById('eModal').classList.add('open');
 }
-async function saveEdit() {
-  const id = document.getElementById('e-id').value;
-  const name = document.getElementById('e-name').value.trim();
-  const goal = document.getElementById('e-goal').value.trim();
-  const url  = document.getElementById('e-url').value.trim();
-  if (!name||!goal||!url) return alert('All fields required');
-  const { error } = await db.from('journeys').update({ name, goal, target_url: url, updated_at: new Date().toISOString() }).eq('id', id);
-  if (error) return alert('Error: '+error.message);
-  closeModal('eModal');
-  loadJourneys();
-}
-async function deleteJourney() {
-  if (!confirm('Delete this journey? This cannot be undone.')) return;
-  const id = document.getElementById('e-id').value;
-  await db.from('journeys').update({ is_active: false }).eq('id', id);
-  closeModal('eModal');
-  loadJourneys();
-}
-</script>
 
-</body>
-</html>
-<script>
-async function triggerRun() {
-  const btn = document.getElementById('run-btn');
-  if (btn) { btn.textContent = '⏳ Triggering...'; btn.disabled = true; }
-  try {
-    const res = await fetch('/api/trigger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-    const data = await res.json();
-    if (data.ok) {
-      if (btn) { btn.textContent = '✅ Running...'; }
-      setTimeout(() => { if (btn) { btn.textContent = '▶ Run All Now'; btn.disabled = false; } loadStats(); loadJourneys(); }, 180000);
+async function saveEdit(){
+  const id=document.getElementById('e-id').value;
+  const name=document.getElementById('e-name').value.trim();
+  const goal=document.getElementById('e-goal').value.trim();
+  const url=document.getElementById('e-url').value.trim();
+  if(!name||!goal||!url) return alert('All fields required');
+  await db.from('journeys').update({name,goal,target_url:url,updated_at:new Date().toISOString()}).eq('id',id);
+  closeModal('eModal'); loadJourneys();
+}
+
+async function deleteJourney(){
+  if(!confirm('Delete this journey?')) return;
+  const id=document.getElementById('e-id').value;
+  await db.from('journeys').update({is_active:false}).eq('id',id);
+  closeModal('eModal'); loadJourneys();
+}
+
+async function saveJourney(){
+  const name=document.getElementById('j-name').value.trim();
+  const goal=document.getElementById('j-goal').value.trim();
+  const url=document.getElementById('j-url').value.trim();
+  const tags=document.getElementById('j-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const stepsRaw=document.getElementById('j-steps').value.trim();
+  if(!name||!goal||!url) return alert('Name, goal and URL required');
+  const steps=stepsRaw.split('\n').filter(s=>s.trim()).map((s,i)=>({action:'ai_decide',description:s.trim(),index:i}));
+  const {data:customer}=await db.from('customers').select('id').limit(1).maybeSingle();
+  const {error}=await db.from('journeys').insert({customer_id:customer?.id,name,goal,target_url:url,steps,tags,is_active:true});
+  if(error) return alert('Error: '+error.message);
+  closeModal('jModal'); loadJourneys();
+}
+
+async function triggerRun(){
+  const btn=document.getElementById('run-btn');
+  if(btn){btn.textContent='⏳ Triggering...';btn.disabled=true;}
+  try{
+    const res=await fetch('/api/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    if(data.ok){
+      if(btn) btn.textContent='✅ Triggered!';
+      setTimeout(()=>{if(btn){btn.textContent='▶ Run All Now';btn.disabled=false;}loadStats();loadJourneys();},180000);
     } else {
-      alert('Error: ' + (data.error || 'Unknown'));
-      if (btn) { btn.textContent = '▶ Run All Now'; btn.disabled = false; }
+      alert('Could not trigger: '+(data.error||'No GITHUB_PAT set in Vercel env vars'));
+      if(btn){btn.textContent='▶ Run All Now';btn.disabled=false;}
     }
-  } catch(e) {
-    alert('Could not reach runner: ' + e.message);
-    if (btn) { btn.textContent = '▶ Run All Now'; btn.disabled = false; }
+  } catch(e){
+    alert('Error: '+e.message);
+    if(btn){btn.textContent='▶ Run All Now';btn.disabled=false;}
   }
 }
+
+loadStats();
+loadJourneys();
+setInterval(loadStats,30000);
 </script>
+</body>
+</html>
