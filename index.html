@@ -1,109 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Klaro Pulse</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <style>body{font-family:'Inter',sans-serif;}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klaro Pulse — AI QA Testing That Never Breaks</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #020617; color: #cbd5e1; }
+  .gradient-text { background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .card-hover { transition: border-color 0.2s, transform 0.2s; }
+  .card-hover:hover { border-color: #4f46e5; transform: translateY(-2px); }
+</style>
 </head>
-<body class="bg-[#020617] text-slate-300 min-h-screen">
-  <nav class="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center border-b border-slate-900">
-    <div class="text-white font-black text-xl tracking-tight">KLARO <span class="text-indigo-500">PULSE</span></div>
-    <div id="live-badge" class="flex items-center gap-2 text-xs text-slate-500">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live
+<body>
+
+<!-- Nav -->
+<nav class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center border-b border-slate-900">
+  <div class="text-white font-black text-xl tracking-tight">KLARO <span class="text-indigo-500">PULSE</span></div>
+  <div class="hidden md:flex gap-8 text-sm text-slate-400">
+    <a href="#how" class="hover:text-white transition-colors">How It Works</a>
+    <a href="#audits" class="hover:text-white transition-colors">Audits</a>
+    <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+    <a href="https://klaro.services/us" class="hover:text-white transition-colors">Klaro US</a>
+  </div>
+  <a href="/app/dashboard.html" class="px-5 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-all">Open Dashboard →</a>
+</nav>
+
+<!-- Hero -->
+<header class="max-w-5xl mx-auto px-6 pt-24 pb-20 text-center">
+  <div class="inline-flex items-center gap-2 px-4 py-1.5 mb-8 text-xs font-bold tracking-widest text-indigo-400 uppercase bg-indigo-500/10 rounded-full border border-indigo-500/20">
+    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+    AI-Powered · Self-Healing · Zero Code Required
+  </div>
+  <h1 class="text-6xl md:text-7xl font-black text-white tracking-tight mb-6 leading-tight">
+    Tests that never<br><span class="gradient-text">break again.</span>
+  </h1>
+  <p class="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed mb-10">
+    Klaro Pulse uses AI to test your product like your best QA engineer — sees the page, understands intent, and heals itself when your UI changes. Full audit reports in plain English. No code. No selectors.
+  </p>
+  <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+    <a href="/app/dashboard.html" class="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20">Open Dashboard</a>
+    <a href="mailto:ops@klaro.services" class="px-10 py-4 bg-slate-900 text-white font-black rounded-2xl border border-slate-800 hover:bg-slate-800 transition-all">Talk to Us</a>
+  </div>
+  <p class="text-sm text-slate-600">$499/mo · No credit card for trial · Cancel anytime</p>
+</header>
+
+<!-- Stats -->
+<div class="border-y border-slate-900 py-10 mb-20">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div><div class="text-3xl font-black text-white mb-1">4</div><div class="text-sm text-slate-500">Audit types per run</div></div>
+      <div><div class="text-3xl font-black text-white mb-1">0</div><div class="text-sm text-slate-500">Lines of code needed</div></div>
+      <div><div class="text-3xl font-black text-white mb-1">3×</div><div class="text-sm text-slate-500">Self-heal attempts</div></div>
+      <div><div class="text-3xl font-black text-indigo-400 mb-1">$499</div><div class="text-sm text-slate-500">vs $10–15k competitors</div></div>
     </div>
-  </nav>
+  </div>
+</div>
 
-  <main class="max-w-7xl mx-auto px-6 py-12">
-    <div class="mb-10">
-      <h1 class="text-3xl font-black text-white mb-1">Journey Monitor</h1>
-      <p class="text-slate-500 text-sm">All active journeys — latest run results</p>
+<!-- How it works -->
+<section id="how" class="max-w-6xl mx-auto px-6 mb-24">
+  <h2 class="text-4xl font-black text-white text-center mb-3">How Pulse works</h2>
+  <p class="text-slate-500 text-center mb-14">Four steps from setup to full AI audit report</p>
+  <div class="grid md:grid-cols-4 gap-6">
+    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 card-hover">
+      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black mb-5 text-sm">1</div>
+      <h3 class="text-white font-bold mb-2">Define in plain English</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">"Verify a user can sign up and reach the dashboard." No selectors. No code. No engineers needed.</p>
     </div>
+    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 card-hover">
+      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black mb-5 text-sm">2</div>
+      <h3 class="text-white font-bold mb-2">AI navigates your app</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Our AI sees your page like a human, decides each action, logs its reasoning, and screenshots every step.</p>
+    </div>
+    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 card-hover">
+      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black mb-5 text-sm">3</div>
+      <h3 class="text-white font-bold mb-2">Self-healing engine</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">When your UI changes and a button moves, the AI finds the new location and adapts. Zero broken tests.</p>
+    </div>
+    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 card-hover">
+      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black mb-5 text-sm">4</div>
+      <h3 class="text-white font-bold mb-2">Full audit + report</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Accessibility, performance, security and AI vision — each scored 0–100 with a written narrative your CTO can read.</p>
+    </div>
+  </div>
+</section>
 
-    <div id="stats" class="grid grid-cols-3 gap-4 mb-10"></div>
-    <div id="journeys" class="space-y-4"></div>
-    <div id="loading" class="text-slate-500 text-sm">Loading journeys...</div>
-  </main>
+<!-- Audits -->
+<section id="audits" class="max-w-6xl mx-auto px-6 mb-24">
+  <h2 class="text-4xl font-black text-white text-center mb-3">4 audits, every run</h2>
+  <p class="text-slate-500 text-center mb-14">No other tool at this price gives you all four automatically</p>
+  <div class="grid md:grid-cols-2 gap-6">
+    <div class="bg-slate-900/50 border border-emerald-900 rounded-2xl p-6 card-hover">
+      <div class="text-emerald-400 font-black text-sm mb-3 uppercase tracking-wider">Accessibility</div>
+      <h3 class="text-white font-bold text-lg mb-2">WCAG 2.1 Compliance</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Missing alt text, unlabelled form fields, poor colour contrast, broken focus indicators. Scored 0–100. Legal compliance risk flagged.</p>
+    </div>
+    <div class="bg-slate-900/50 border border-indigo-900 rounded-2xl p-6 card-hover">
+      <div class="text-indigo-400 font-black text-sm mb-3 uppercase tracking-wider">Performance</div>
+      <h3 class="text-white font-bold text-lg mb-2">Core Web Vitals</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">First Contentful Paint, TTFB, total load time, DOM size, transfer size. Flags anything that hurts conversion. Scored 0–100.</p>
+    </div>
+    <div class="bg-slate-900/50 border border-amber-900 rounded-2xl p-6 card-hover">
+      <div class="text-amber-400 font-black text-sm mb-3 uppercase tracking-wider">Security</div>
+      <h3 class="text-white font-bold text-lg mb-2">Surface Scan</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">HTTPS enforcement, CSRF gaps, mixed content, exposed email addresses, unsandboxed third-party iframes. Scored 0–100.</p>
+    </div>
+    <div class="bg-slate-900/50 border border-rose-900 rounded-2xl p-6 card-hover">
+      <div class="text-rose-400 font-black text-sm mb-3 uppercase tracking-wider">AI Vision</div>
+      <h3 class="text-white font-bold text-lg mb-2">Human-Eye Review</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">AI reads your page like a senior UX consultant — critiques navigation clarity, CTA effectiveness, trust signals and layout issues. Written narrative, not just a score.</p>
+    </div>
+  </div>
+</section>
 
-  <script>
-    const SUPABASE_URL = 'REPLACE_WITH_YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<!-- vs Competitors -->
+<section class="max-w-5xl mx-auto px-6 mb-24">
+  <h2 class="text-4xl font-black text-white text-center mb-3">Why not Datadog or Checkly?</h2>
+  <p class="text-slate-500 text-center mb-14">They sell test infrastructure. We sell intelligence.</p>
+  <div class="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+    <div class="grid grid-cols-5 text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-900 px-6 py-3">
+      <div>Platform</div>
+      <div class="text-center">Price/mo</div>
+      <div class="text-center">Self-Heal</div>
+      <div class="text-center">AI Vision</div>
+      <div class="text-center">Audit PDF</div>
+    </div>
+    <div class="divide-y divide-slate-800">
+      <div class="grid grid-cols-5 px-6 py-4 bg-indigo-950/30 items-center">
+        <div class="font-bold text-white">Klaro Pulse</div>
+        <div class="text-center font-black text-indigo-400">$499</div>
+        <div class="text-center text-emerald-400 font-bold">✓</div>
+        <div class="text-center text-emerald-400 font-bold">✓</div>
+        <div class="text-center text-emerald-400 font-bold">✓</div>
+      </div>
+      <div class="grid grid-cols-5 px-6 py-3 items-center">
+        <div class="text-slate-300">Datadog Synthetics</div>
+        <div class="text-center text-slate-400">$10,000+</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+      </div>
+      <div class="grid grid-cols-5 px-6 py-3 items-center">
+        <div class="text-slate-300">Checkly</div>
+        <div class="text-center text-slate-400">$599–$1,499</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+      </div>
+      <div class="grid grid-cols-5 px-6 py-3 items-center">
+        <div class="text-slate-300">BrowserStack</div>
+        <div class="text-center text-slate-400">$1,999+</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+      </div>
+      <div class="grid grid-cols-5 px-6 py-3 items-center">
+        <div class="text-slate-300">Mabl</div>
+        <div class="text-center text-slate-400">$6,000+</div>
+        <div class="text-center text-amber-400">Partial</div>
+        <div class="text-center text-red-500">✗</div>
+        <div class="text-center text-red-500">✗</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    async function load() {
-      const { data: outcomes } = await db
-        .from('outcomes')
-        .select('*, journeys(name, goal, target_url), test_runs(commit_sha, started_at)')
-        .order('created_at', { ascending: false });
+<!-- Pricing -->
+<section id="pricing" class="max-w-4xl mx-auto px-6 mb-24 text-center">
+  <h2 class="text-4xl font-black text-white mb-3">Simple, flat pricing</h2>
+  <p class="text-slate-500 mb-14">One price. Every feature. No per-seat surprises.</p>
+  <div class="grid md:grid-cols-2 gap-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-left">
+      <div class="text-slate-400 text-sm font-bold mb-2">GROWTH</div>
+      <div class="text-5xl font-black text-white mb-1">$499<span class="text-xl text-slate-400 font-normal">/mo</span></div>
+      <p class="text-slate-400 text-sm mb-6">Billed monthly · Cancel anytime</p>
+      <ul class="space-y-2 text-sm text-slate-300 mb-8">
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Unlimited journeys</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> 4 audit types per run</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> AI self-healing engine</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> PDF reports per run</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Slack + webhook alerts</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Screenshot trail</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> GitHub Actions integration</li>
+      </ul>
+      <a href="/app/dashboard.html" class="block text-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-all">Start Free Trial</a>
+    </div>
+    <div class="bg-slate-900 border border-indigo-600 rounded-2xl p-8 text-left relative">
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-indigo-600 text-white text-xs font-black rounded-full">COMING SOON</div>
+      <div class="text-indigo-400 text-sm font-bold mb-2">ENTERPRISE</div>
+      <div class="text-5xl font-black text-white mb-1">Custom</div>
+      <p class="text-slate-400 text-sm mb-6">Contact us for pricing</p>
+      <ul class="space-y-2 text-sm text-slate-300 mb-8">
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Everything in Growth</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Custom AI model training</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Multi-tenant dashboard</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> White-label reports</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> SLA guarantee</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Dedicated success manager</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> On-premise option</li>
+      </ul>
+      <a href="mailto:ops@klaro.services" class="block text-center px-6 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">Contact Sales</a>
+    </div>
+  </div>
+</section>
 
-      document.getElementById('loading').remove();
+<!-- Footer -->
+<footer class="border-t border-slate-900 py-10">
+  <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="text-white font-black">KLARO <span class="text-indigo-500">PULSE</span></div>
+    <div class="text-sm text-slate-500">Part of <a href="https://klaro.services" class="text-slate-400 hover:text-white">Klaro Global</a> · ops@klaro.services</div>
+    <div class="text-sm text-slate-600">© 2026 Klaro Global</div>
+  </div>
+</footer>
 
-      // Deduplicate — latest outcome per journey
-      const seen = new Set();
-      const latest = (outcomes || []).filter(o => {
-        if (seen.has(o.journey_id)) return false;
-        seen.add(o.journey_id);
-        return true;
-      });
-
-      const total = latest.length;
-      const passed = latest.filter(o => o.passed).length;
-      const failed = total - passed;
-
-      document.getElementById('stats').innerHTML = `
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <div class="text-3xl font-black text-white">${total}</div>
-          <div class="text-xs text-slate-500 mt-1 uppercase tracking-wider">Total Journeys</div>
-        </div>
-        <div class="bg-emerald-950 border border-emerald-900 rounded-2xl p-6">
-          <div class="text-3xl font-black text-emerald-400">${passed}</div>
-          <div class="text-xs text-slate-500 mt-1 uppercase tracking-wider">Passing</div>
-        </div>
-        <div class="bg-red-950 border border-red-900 rounded-2xl p-6">
-          <div class="text-3xl font-black text-red-400">${failed}</div>
-          <div class="text-xs text-slate-500 mt-1 uppercase tracking-wider">Failing</div>
-        </div>
-      `;
-
-      const container = document.getElementById('journeys');
-      if (!latest.length) {
-        container.innerHTML = '<div class="text-slate-600 text-sm">No results yet — push to main to trigger the first run.</div>';
-        return;
-      }
-
-      latest.forEach(o => {
-        const j = o.journeys;
-        const r = o.test_runs;
-        const statusColor = o.passed ? 'text-emerald-400 bg-emerald-950 border-emerald-900' : 'text-red-400 bg-red-950 border-red-900';
-        const dot = o.passed ? 'bg-emerald-400' : 'bg-red-400';
-        const label = o.passed ? 'PASSED' : 'FAILED';
-        const date = r?.started_at ? new Date(r.started_at).toLocaleString() : '—';
-        const sha = r?.commit_sha ? r.commit_sha.slice(0, 7) : '—';
-
-        container.innerHTML += `
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex items-center justify-between gap-6 hover:border-slate-700 transition-all">
-            <div class="flex items-start gap-4 flex-1">
-              <div class="w-3 h-3 rounded-full ${dot} mt-1 flex-shrink-0"></div>
-              <div>
-                <div class="text-white font-bold">${j?.name || 'Unknown'}</div>
-                <div class="text-slate-500 text-sm mt-0.5">${j?.goal || ''}</div>
-                <div class="text-slate-600 text-xs mt-2">
-                  ${o.passed_steps}/${o.total_steps} steps passed &nbsp;·&nbsp; ${date} &nbsp;·&nbsp; <span class="font-mono">${sha}</span>
-                </div>
-              </div>
-            </div>
-            <div class="px-4 py-2 rounded-xl border text-xs font-black ${statusColor}">${label}</div>
-          </div>
-        `;
-      });
-    }
-
-    load();
-    setInterval(load, 30000);
-  </script>
 </body>
 </html>
