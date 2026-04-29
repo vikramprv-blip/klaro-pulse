@@ -1,13 +1,14 @@
-const { Groq } = require("groq-sdk");
-const { chromium } = require("playwright");
-const { createClient } = require("@supabase/supabase-js");
-require("dotenv").config();
+import Groq from "groq-sdk";
+import { chromium } from "playwright";
+import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
+config();
 
 const cleanEnv = (key) => (process.env[key] || "").replace(/['"]+/g, "").trim();
 const groq = new Groq({ apiKey: cleanEnv("GROQ_API_KEY") });
 const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
-const SYSTEM_PROMPT = `You are a world-class UX auditor and conversion strategist. 
+const SYSTEM_PROMPT = `You are a world-class UX auditor and conversion strategist.
 Analyze the website content provided and return ONLY a valid JSON object with exactly these fields:
 {
   "authority_score": <integer 0-100>,
@@ -23,13 +24,12 @@ Analyze the website content provided and return ONLY a valid JSON object with ex
   "target_audience_clarity": "<Clear|Vague|Confusing>",
   "pricing_clarity": "<Clear|Vague|Hidden|None>",
   "cta_effectiveness": "<Strong|Weak|Missing>",
-  "industry": "<detected industry>",
-  "scanned_at": "<ISO date string>"
+  "industry": "<detected industry>"
 }
 Be brutally honest. A layman reading this should instantly understand the problems and opportunities.`;
 
 async function runMasterAudit(target) {
-  const browser = await chromium.launch({ 
+  const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
@@ -40,12 +40,10 @@ async function runMasterAudit(target) {
 
   try {
     console.log(`[Scanning] ${target.name} → ${target.url}`);
-    
     const startTime = Date.now();
     await page.goto(target.url, { waitUntil: 'networkidle', timeout: 45000 });
     const loadTime = Date.now() - startTime;
 
-    // Grab full page text, title, meta description
     const pageData = await page.evaluate(() => ({
       text: document.body.innerText.slice(0, 3000),
       title: document.title,
@@ -55,8 +53,6 @@ async function runMasterAudit(target) {
       ctaButtons: Array.from(document.querySelectorAll('a,button')).map(el => el.innerText.trim()).filter(t => t.length > 0 && t.length < 40).slice(0, 10),
       hasPricing: document.body.innerText.toLowerCase().includes('pricing') || document.body.innerText.toLowerCase().includes('per month'),
       hasTestimonials: document.body.innerText.toLowerCase().includes('testimonial') || document.body.innerText.toLowerCase().includes('review') || document.body.innerText.toLowerCase().includes('trusted by'),
-      linkCount: document.querySelectorAll('a').length,
-      imageCount: document.querySelectorAll('img').length,
     }));
 
     const userContent = `
@@ -71,7 +67,7 @@ Has social proof/testimonials: ${pageData.hasTestimonials}
 Page load time: ${loadTime}ms
 Console errors: ${consoleErrors.length}
 Page content: ${pageData.text}
-Mission for this audit: ${target.mission}
+Mission: ${target.mission}
     `.trim();
 
     const completion = await groq.chat.completions.create({
@@ -89,14 +85,14 @@ Mission for this audit: ${target.mission}
     report.load_time_ms = loadTime;
     report.console_errors = consoleErrors.length;
 
-    const status = report.authority_score >= 75 && consoleErrors.length === 0 ? 'UP' : 
+    const status = report.authority_score >= 75 && consoleErrors.length === 0 ? 'UP' :
                    report.authority_score >= 50 ? 'DEGRADED' : 'DOWN';
 
     await supabase.from('pulse_logs').insert([{
       url: target.url,
       status,
       reasoning: report.novice_summary,
-      metadata: { 
+      metadata: {
         full_report: report,
         mission: target.mission,
         target_name: target.name,
@@ -129,17 +125,15 @@ async function run() {
   const targetArg = process.argv[2];
 
   if (targetArg) {
-    // Single URL mode: node agents/pulse-agent.js https://somesite.com
     console.log(`[Single Scan Mode] ${targetArg}`);
     await runMasterAudit({
       name: new URL(targetArg).hostname,
       url: targetArg,
-      mission: 'Audit this website for UX friction, trust signals, conversion clarity and competitive weaknesses. Return authority_score (0-100), novice_summary, ux_friction_points array, resolution_steps array, strengths array, revenue_opportunities array, competitor_advantage, trust_score, conversion_score, mobile_readiness, target_audience_clarity, pricing_clarity, cta_effectiveness, industry.'
+      mission: 'Audit this website for UX friction, trust signals, conversion clarity and competitive weaknesses. Return authority_score, novice_summary, ux_friction_points, resolution_steps, strengths, revenue_opportunities, competitor_advantage, trust_score, conversion_score, mobile_readiness, target_audience_clarity, pricing_clarity, cta_effectiveness, industry.'
     });
     return;
   }
 
-  // Batch mode: scan all active targets from database
   const { data: targets, error } = await supabase
     .from('pulse_targets')
     .select('*')
@@ -149,16 +143,12 @@ async function run() {
   if (!targets?.length) { console.log("No active targets. Add rows to pulse_targets table."); return; }
 
   console.log(`[Batch Mode] Scanning ${targets.length} targets...\n`);
-  
   for (const t of targets) {
     await runMasterAudit(t);
-    // Small delay between scans to be respectful
     await new Promise(r => setTimeout(r, 2000));
   }
 
-  console.log("\n═══════════════════════════════════");
-  console.log(`  Done. ${targets.length} sites scanned.`);
-  console.log("═══════════════════════════════════");
+  console.log(`\n✅ Done. ${targets.length} sites scanned.`);
 }
 
 run();

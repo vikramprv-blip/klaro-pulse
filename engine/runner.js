@@ -4,7 +4,7 @@ import Groq from 'groq-sdk';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const SUPABASE_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
+const SUPABASE_URL = 'https://chwyrdublpuavcmjendw.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });

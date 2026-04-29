@@ -4,7 +4,7 @@ import Groq from 'groq-sdk';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const SUPABASE_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
+const SUPABASE_URL = 'https://chwyrdublpuavcmjendw.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const POLL_INTERVAL = 30000;
