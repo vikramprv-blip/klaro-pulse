@@ -20,13 +20,15 @@ jobs:
         run: docker build -t klaro-pulse-engine -f engine/Dockerfile .
 
       - name: Run AI journey tests
+        env:
+          SUPABASE_URL: https://vhnvclvzxkybnybqgyci.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZobnZjbHZ6eGt5Ym55YnFneWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc1MjIsImV4cCI6MjA5Mjk3MzUyMn0.toq9DNk257c58p2dNOvjc2vYBY7zClF2RY2tGv8m1VY
         run: |
           docker run --rm \
-            -e SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            -e SUPABASE_URL=${{ env.SUPABASE_URL }} \
+            -e SUPABASE_ANON_KEY=${{ env.SUPABASE_ANON_KEY }} \
             -e SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }} \
             -e GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
-            -e GITHUB_SHA=${{ github.sha }} \
-            -e GITHUB_REF_NAME=${{ github.ref_name }} \
             --shm-size=2gb \
             klaro-pulse-engine
 

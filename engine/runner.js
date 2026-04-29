@@ -1,13 +1,18 @@
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import { decideAction, healStep, auditPage, generateRunNarrative } from './claude-agent.js';
+import { runAccessibilityAudit } from './audits/accessibility.js';
+import { runPerformanceAudit } from './audits/performance.js';
+import { runSecurityAudit } from './audits/security.js';
+import { generateReport } from './reporter.js';
 
 dotenv.config();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const SUPABASE_URL = 'https://vhnvclvzxkybnybqgyci.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const COMMIT_SHA = process.env.GITHUB_SHA || 'local';
 
