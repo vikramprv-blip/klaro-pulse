@@ -2,7 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   'https://vhnvclvzxkybnybqgyci.supabase.co',
-  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZobnZjbHZ6eGt5Ym55YnFneWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc1MjIsImV4cCI6MjA5Mjk3MzUyMn0.toq9DNk257c58p2dNOvjc2vYBY7zClF2RY2tGv8m1VY'
+);
+
 );
 
 export async function generateReport(runId, journey, outcome, stepResults, auditResults, narrative) {
