@@ -1,73 +1,25 @@
--- Journey definitions: what to test and how
-create table if not exists journeys (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  goal text not null,
-  target_url text not null,
-  steps jsonb not null default '[]',
-  is_active boolean default true,
-  created_at timestamptz default now()
-);
-
--- Each time a journey is triggered
-create table if not exists test_runs (
-  id uuid primary key default gen_random_uuid(),
-  journey_id uuid references journeys(id),
-  triggered_by text default 'github-push',
-  commit_sha text,
-  status text default 'pending',
-  started_at timestamptz default now(),
-  completed_at timestamptz
-);
-
--- Each step result inside a run
-create table if not exists step_results (
-  id uuid primary key default gen_random_uuid(),
-  run_id uuid references test_runs(id),
-  step_index integer not null,
-  step_description text,
-  status text not null,
-  ai_reasoning text,
-  screenshot_url text,
-  error_message text,
-  duration_ms integer,
-  created_at timestamptz default now()
-);
-
--- Final outcome per run
-create table if not exists outcomes (
-  id uuid primary key default gen_random_uuid(),
-  run_id uuid references test_runs(id) unique,
-  journey_id uuid references journeys(id),
-  passed boolean not null,
-  total_steps integer,
-  passed_steps integer,
-  failed_steps integer,
-  summary text,
-  created_at timestamptz default now()
-);
-
--- Enable RLS but allow service role full access
+create table if not exists customers (id uuid primary key default gen_random_uuid(), name text not null, email text unique not null, plan text default 'growth', stripe_customer_id text, slack_webhook_url text, alert_webhook_url text, is_active boolean default true, created_at timestamptz default now());
+create table if not exists journeys (id uuid primary key default gen_random_uuid(), customer_id uuid references customers(id), name text not null, goal text not null, target_url text not null, steps jsonb default '[]', schedule text default 'on_push', is_active boolean default true, tags text[] default '{}', created_at timestamptz default now(), updated_at timestamptz default now());
+create table if not exists test_runs (id uuid primary key default gen_random_uuid(), journey_id uuid references journeys(id), customer_id uuid references customers(id), triggered_by text default 'github-push', commit_sha text, branch text, status text default 'pending', started_at timestamptz default now(), completed_at timestamptz, duration_ms integer);
+create table if not exists step_results (id uuid primary key default gen_random_uuid(), run_id uuid references test_runs(id) on delete cascade, step_index integer not null, step_description text, action_taken text, status text not null, ai_reasoning text, ai_confidence integer, screenshot_url text, error_message text, heal_attempts integer default 0, heal_log jsonb default '[]', duration_ms integer, created_at timestamptz default now());
+create table if not exists outcomes (id uuid primary key default gen_random_uuid(), run_id uuid references test_runs(id) on delete cascade unique, journey_id uuid references journeys(id), customer_id uuid references customers(id), passed boolean not null, total_steps integer, passed_steps integer, failed_steps integer, healed_steps integer default 0, ai_summary text, created_at timestamptz default now());
+create table if not exists audit_results (id uuid primary key default gen_random_uuid(), run_id uuid references test_runs(id) on delete cascade, journey_id uuid references journeys(id), audit_type text not null, score integer, status text, findings jsonb default '[]', ai_narrative text, raw_data jsonb, created_at timestamptz default now());
+create table if not exists reports (id uuid primary key default gen_random_uuid(), run_id uuid references test_runs(id) on delete cascade, journey_id uuid references journeys(id), customer_id uuid references customers(id), report_url text, html_url text, generated_at timestamptz default now());
+create table if not exists alerts (id uuid primary key default gen_random_uuid(), run_id uuid references test_runs(id), channel text, payload jsonb, sent_at timestamptz default now(), success boolean);
+alter table customers enable row level security;
 alter table journeys enable row level security;
 alter table test_runs enable row level security;
 alter table step_results enable row level security;
 alter table outcomes enable row level security;
-
-create policy "service role full access" on journeys for all using (true);
-create policy "service role full access" on test_runs for all using (true);
-create policy "service role full access" on step_results for all using (true);
-create policy "service role full access" on outcomes for all using (true);
-
--- Seed one example journey
-insert into journeys (name, goal, target_url, steps) values (
-  'User Login Flow',
-  'Verify a user can log in with valid credentials and reach the dashboard',
-  'https://your-app.com',
-  '[
-    {"action": "navigate", "description": "Go to login page"},
-    {"action": "type", "selector": "input[type=email]", "value": "test@example.com", "description": "Enter email"},
-    {"action": "type", "selector": "input[type=password]", "value": "testpassword", "description": "Enter password"},
-    {"action": "click", "description": "Click the login button"},
-    {"action": "assert", "description": "Confirm dashboard is visible"}
-  ]'
-);
+alter table audit_results enable row level security;
+alter table reports enable row level security;
+alter table alerts enable row level security;
+create policy "service_full" on customers for all using (true);
+create policy "service_full" on journeys for all using (true);
+create policy "service_full" on test_runs for all using (true);
+create policy "service_full" on step_results for all using (true);
+create policy "service_full" on outcomes for all using (true);
+create policy "service_full" on audit_results for all using (true);
+create policy "service_full" on reports for all using (true);
+create policy "service_full" on alerts for all using (true);
+insert into customers (name, email, plan) values ('Klaro Internal', 'ops@klaro.services', 'growth') on conflict do nothing;
