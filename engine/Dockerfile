@@ -3,5 +3,6 @@ WORKDIR /app
 COPY engine/package.json ./package.json
 RUN npm install
 RUN npx playwright install chromium
-COPY engine/ ./
+COPY engine/audits ./audits
+COPY engine/poller.js ./runner.js
 CMD ["node", "runner.js"]
