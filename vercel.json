@@ -1,15 +1,15 @@
 {
-  "functions": {
-    "api/trigger.js": { "runtime": "@vercel/edge" }
-  },
   "rewrites": [
-    { "source": "/api/trigger", "destination": "/api/trigger.js" },
-    { "source": "/dashboard", "destination": "/app/dashboard.html" }
+    { "source": "/dashboard", "destination": "/app/dashboard.html" },
+    { "source": "/app/dashboard", "destination": "/app/dashboard.html" }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Frame-Options", "value": "DENY" },
-      { "key": "X-Content-Type-Options", "value": "nosniff" }
-    ]}
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
   ]
 }
