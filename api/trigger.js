@@ -1,24 +1,18 @@
 export const config = { runtime: 'edge' };
-
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
   }
-
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
-
   const GITHUB_TOKEN = process.env.GITHUB_PAT;
   const REPO = 'vikramprv-blip/klaro-pulse';
-
   if (!GITHUB_TOKEN) {
-    return new Response(JSON.stringify({ error: 'Runner not configured' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    return new Response(JSON.stringify({ error: 'GITHUB_PAT not set in Vercel env vars' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
-
   const body = await req.json().catch(() => ({}));
-  const journeyId = body.journey_id || null;
-
+  const target_url = body.target_url || '';
   const response = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/pulse.yml/dispatches`, {
     method: 'POST',
     headers: {
@@ -28,14 +22,12 @@ export default async function handler(req) {
     },
     body: JSON.stringify({
       ref: 'main',
-      inputs: journeyId ? { journey_id: journeyId } : {}
+      inputs: { target_url }
     })
   });
-
   if (response.status === 204) {
-    return new Response(JSON.stringify({ ok: true, message: 'Run triggered — results appear in 2-3 minutes' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    return new Response(JSON.stringify({ ok: true, message: target_url ? `Scanning ${target_url} — results in 3-5 min` : 'Batch scan triggered — results in 5-10 min' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
-
   const err = await response.text();
   return new Response(JSON.stringify({ error: 'Failed to trigger', detail: err }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
 }
