@@ -112,6 +112,52 @@ const PROVIDERS = [
     }
   },
   {
+    name: "Cerebras/Llama",
+    available: () => !!cleanEnv("CEREBRAS_API_KEY"),
+    call: async (prompt) => {
+      const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${cleanEnv("CEREBRAS_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 4000,
+        })
+      });
+      if (!res.ok) throw new Error(`Cerebras ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      return data.choices[0].message.content;
+    }
+  },
+  {
+    name: "SambaNova/Llama",
+    available: () => !!cleanEnv("SAMBANOVA_API_KEY"),
+    call: async (prompt) => {
+      const res = await fetch("https://api.sambanova.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${cleanEnv("SAMBANOVA_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "Meta-Llama-3.3-70B-Instruct",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 4000,
+        })
+      });
+      if (!res.ok) throw new Error(`SambaNova ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      return data.choices[0].message.content;
+    }
+  },
+  {
     name: "Groq/Llama",
     available: () => !!cleanEnv("GROQ_API_KEY"),
     call: async (prompt) => {
