@@ -268,6 +268,14 @@ Load: ${c.loadTime}ms | CTAs: ${c.ctas?.slice(0,5).join(' | ')}
 Content: ${c.text?.slice(0,400)}
 `).join('---')}
 
+CRITICAL FORMATTING RULES - follow exactly:
+- Write number ranges with "to": "4 to 6 million" NOT "4-6M" or "4–6M"
+- Write percentages as words: "15 to 20 percent" NOT "15-20%" or "15%-20%"
+- Use plain ASCII only - no em dashes, smart quotes, bullet symbols, or special characters
+- Dollar amounts in full: "4 to 6 million dollars per year" NOT "$4-6M"
+- No markdown, no asterisks, no hyphens in numeric ranges
+- All JSON string values must contain plain readable English only
+
 Return ONLY this JSON structure:
 {
   "overall_score": <0-100>,
