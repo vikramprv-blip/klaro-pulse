@@ -30,17 +30,14 @@ jobs:
       - name: Install Playwright
         run: npx playwright install chromium --with-deps
       - name: Install Python dependencies
-        run: |
-          pip install browser-use playwright python-dotenv supabase groq openai google-generativeai
-          playwright install chromium
+        run: pip install browser-use playwright python-dotenv supabase groq openai google-generativeai langchain-google-genai langchain-openai langchain-groq
       - name: Run scan
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}n          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}n          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
