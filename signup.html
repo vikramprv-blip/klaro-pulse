@@ -69,7 +69,7 @@ async function signup(){
   const {data,error}=await db.auth.signUp({email,password:pass,options:{data:{first_name:fname,last_name:lname,company,plan:'growth'}}});
   if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Start Free Trial →';return;}
   if(data.session){
-    window.location.href='/dashboard';
+    window.location.href='/pulse/dashboard';
   } else {
     ok.textContent='✅ Account created! Check your email to confirm, then sign in.';
     ok.style.display='block';
