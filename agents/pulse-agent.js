@@ -21,7 +21,7 @@ const PROVIDERS = [
           "X-Title": "Klaro Pulse"
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1:free",
+          model: "meta-llama/llama-3.3-70b-instruct:free",
           messages: [{ role: "user", content: prompt }],
           response_format: { type: "json_object" },
           temperature: 0.2,
