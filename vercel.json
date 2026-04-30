@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/pulse", "destination": "/index.html" },
     { "source": "/ops", "destination": "/ops.html" },
     { "source": "/dashboard", "destination": "/ops.html" }
   ],
