@@ -20,18 +20,33 @@ CEREBRAS_KEY = os.getenv("CEREBRAS_API_KEY", "")
 import urllib.request
 
 def supabase_insert(data: dict):
-    url = f"{SUPABASE_URL}/rest/v1/pulse_logs"
+    url = f"{SUPABASE_URL}/rest/v1/lam_runs"
     payload = json.dumps(data).encode()
     req = urllib.request.Request(url, data=payload, method='POST')
     req.add_header('apikey', SUPABASE_KEY)
     req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
     req.add_header('Content-Type', 'application/json')
-    req.add_header('Prefer', 'return=minimal')
+    req.add_header('Prefer', 'return=representation')
+    try:
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read())
+        return result[0]['id'] if result else True
+    except Exception as e:
+        print(f"  Supabase error: {e}")
+        return False
+
+def supabase_update(run_id: str, data: dict):
+    url = f"{SUPABASE_URL}/rest/v1/lam_runs?id=eq.{run_id}"
+    payload = json.dumps(data).encode()
+    req = urllib.request.Request(url, data=payload, method='PATCH')
+    req.add_header('apikey', SUPABASE_KEY)
+    req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
+    req.add_header('Content-Type', 'application/json')
     try:
         urllib.request.urlopen(req)
         return True
     except Exception as e:
-        print(f"  Supabase error: {e}")
+        print(f"  Supabase update error: {e}")
         return False
 
 def call_llm(prompt: str) -> dict:
@@ -269,19 +284,30 @@ Return ONLY this JSON:
     score = report.get('overall_score', 50)
     status = 'UP' if score >= 75 else 'DEGRADED' if score >= 50 else 'DOWN'
 
-    success = supabase_insert({
+    user_id = os.getenv("LAM_USER_ID", None)
+    run_id = supabase_insert({
         'url': target_url,
+        'user_id': user_id,
         'status': status,
-        'reasoning': report.get('executive_brief', {}).get('plain_english_summary', ''),
-        'metadata': {
-            'full_report': report,
-            'target_name': hostname,
-            'report_version': 'v3_lam',
-        }
+        'overall_score': score,
+        'grade': report.get('grade', 'C'),
+        'lam_score': report.get('lam_score', score),
+        'ada_score': report.get('ada_compliance_report', {}).get('ada_score', 50),
+        'soc_score': report.get('soc_compliance_report', {}).get('soc_score', 50),
+        'executive_brief': report.get('executive_brief', {}),
+        'client_experience': report.get('client_experience_report', {}),
+        'ada_report': report.get('ada_compliance_report', {}),
+        'soc_report': report.get('soc_compliance_report', {}),
+        'competitive_intel': report.get('competitive_intelligence', {}),
+        'roadmap': report.get('ninety_day_roadmap', {}),
+        'strengths': report.get('strengths', []),
+        'raw_data': report.get('lam_raw', {}),
+        'triggered_by': os.getenv("LAM_TRIGGERED_BY", "manual"),
+        'completed_at': datetime.now().isoformat()
     })
 
     print(f"\n{'='*50}")
-    print(f"LAM COMPLETE | Score: {score}/100 | Saved: {success}")
+    print(f"LAM COMPLETE | Score: {score}/100 | Run ID: {run_id}")
     print(f"{'='*50}")
     return report
 
