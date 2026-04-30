@@ -191,6 +191,23 @@ const BLOCKED = ["rippling.com","deel.com","gusto.com","xero.com","datadoghq.com
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+async function callAI(prompt) {
+  for (const provider of PROVIDERS) {
+    if (!provider.available()) { console.log(`  [Skip] ${provider.name} — no key`); continue; }
+    try {
+      console.log(`  [AI] Using ${provider.name}...`);
+      const result = await provider.call(prompt);
+      const clean = result.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      return JSON.parse(clean);
+    } catch(e) {
+      console.log(`  [Fallback] ${provider.name} failed: ${e.message.slice(0,80)}`);
+      await sleep(2000);
+    }
+  }
+  throw new Error("All AI providers failed");
+}
+
+
 async function scanPage(url) {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'] });
   const page = await browser.newPage();
