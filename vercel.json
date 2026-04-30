@@ -1,10 +1,10 @@
 {
   "rewrites": [
     { "source": "/pulse", "destination": "/index.html" },
-    { "source": "/signin", "destination": "/signin.html" },
-    { "source": "/signup", "destination": "/signup.html" },
-    { "source": "/ops", "destination": "/ops.html" },
-    { "source": "/dashboard", "destination": "/ops.html" }
+    { "source": "/pulse/signin", "destination": "/signin.html" },
+    { "source": "/pulse/signup", "destination": "/signup.html" },
+    { "source": "/pulse/dashboard", "destination": "/ops.html" },
+    { "source": "/pulse/ops", "destination": "/ops.html" }
   ],
   "headers": [
     {

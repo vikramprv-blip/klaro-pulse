@@ -32,7 +32,7 @@ input:focus{border-color:#7c3aed}
   <div><label>Password</label><input id="pass" type="password" placeholder="••••••••"/></div>
   <button class="btn" id="btn" onclick="signin()">Sign In</button>
   <div style="text-align:center;margin-top:16px;font-size:13px;color:#4b5563">
-    No account? <a href="/signup" class="link">Start free trial</a>
+    No account? <a href="/pulse/signup" class="link">Start free trial</a>
   </div>
 </div>
 <script>
@@ -44,7 +44,7 @@ async function signin(){
   btn.disabled=true; btn.textContent='Signing in...'; err.style.display='none';
   const {error}=await db.auth.signInWithPassword({email:document.getElementById('email').value,password:document.getElementById('pass').value});
   if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Sign In';return;}
-  window.location.href='/dashboard';
+  window.location.href='/pulse/dashboard';
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter')signin();});
 </script>
