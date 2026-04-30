@@ -186,6 +186,9 @@ const PROVIDERS = [
 ];
 
 
+
+const BLOCKED = ["rippling.com","deel.com","gusto.com","xero.com","datadoghq.com","webflow.com","clio.com","clickup.com","workday.com","salesforce.com","bamboohr.com","hubspot.com","zendesk.com"];
+
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function scanPage(url) {
