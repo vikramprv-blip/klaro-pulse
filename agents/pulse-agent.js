@@ -9,32 +9,87 @@ const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVI
 // Provider rotation — primary to emergency
 const PROVIDERS = [
   {
-    name: "OpenRouter/DeepSeek-R1",
-    available: () => !!cleanEnv("OPENROUTER_API_KEY"),
+    name: "Gemini/Flash",
+    available: () => !!cleanEnv("GEMINI_API_KEY"),
     call: async (prompt) => {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cleanEnv("GEMINI_API_KEY")}`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${cleanEnv("OPENROUTER_API_KEY")}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://klaro.services",
-          "X-Title": "Klaro Pulse"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "meta-llama/llama-3.3-70b-instruct:free",
-          messages: [{ role: "user", content: prompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-          max_tokens: 4000,
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 4000 }
         })
       });
-      if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
+      if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
       const data = await res.json();
-      return data.choices[0].message.content;
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Gemini empty response");
+      return text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
     }
   },
   {
-    name: "DeepSeek Direct",
+    name: "OpenAI/GPT-5.4-mini",
+    available: () => !!cleanEnv("OPENAI_API_KEY"),
+    call: async (prompt) => {
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${cleanEnv("OPENAI_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-5.4-mini",
+          input: prompt,
+          store: false,
+        })
+      });
+      if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      const text = data.output?.[0]?.content?.[0]?.text || data.output_text || "";
+      if (!text) throw new Error("OpenAI empty response");
+      return text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+    }
+  },
+  {
+    name: "OpenRouter/Llama-free",
+    available: () => !!cleanEnv("OPENROUTER_API_KEY"),
+    call: async (prompt) => {
+      const freeModels = [
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "google/gemma-3-27b-it:free",
+        "openai/gpt-oss-120b:free",
+      ];
+      for (const model of freeModels) {
+        try {
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${cleanEnv("OPENROUTER_API_KEY")}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://klaro.services",
+              "X-Title": "Klaro Pulse"
+            },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: "user", content: prompt }],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+              max_tokens: 4000,
+            })
+          });
+          if (!res.ok) { console.log(`    [OR] ${model} failed ${res.status}`); continue; }
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content;
+          if (!text) { console.log(`    [OR] ${model} empty`); continue; }
+          console.log(`    [OR] Success: ${model}`);
+          return text;
+        } catch(e) { console.log(`    [OR] ${model} error: ${e.message.slice(0,50)}`); }
+      }
+      throw new Error("All OpenRouter free models failed");
+    }
+  },
+  {
+    name: "DeepSeek",
     available: () => !!cleanEnv("DEEPSEEK_API_KEY"),
     call: async (prompt) => {
       const res = await fetch("https://api.deepseek.com/chat/completions", {
@@ -76,7 +131,6 @@ const PROVIDERS = [
       });
       if (!res.ok) {
         const err = await res.text();
-        if (res.status === 429) throw new Error(`RATE_LIMITED: ${err}`);
         throw new Error(`Groq ${res.status}: ${err}`);
       }
       const data = await res.json();
@@ -85,24 +139,6 @@ const PROVIDERS = [
   }
 ];
 
-async function callAI(prompt) {
-  for (const provider of PROVIDERS) {
-    if (!provider.available()) { console.log(`  [Skip] ${provider.name} — no API key`); continue; }
-    try {
-      console.log(`  [AI] Using ${provider.name}...`);
-      const result = await provider.call(prompt);
-      // Strip any markdown fences just in case
-      const clean = result.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      return JSON.parse(clean);
-    } catch(e) {
-      console.log(`  [Fallback] ${provider.name} failed: ${e.message.slice(0,80)}`);
-      await sleep(2000);
-    }
-  }
-  throw new Error("All AI providers failed");
-}
-
-const BLOCKED = ["rippling.com","deel.com","gusto.com","xero.com","datadoghq.com","webflow.com","clio.com","clickup.com","workday.com","salesforce.com","bamboohr.com"];
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
