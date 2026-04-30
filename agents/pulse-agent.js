@@ -8,6 +8,13 @@ const cleanEnv = (key) => (process.env[key] || "").replace(/['"]+/g, "").trim();
 const groq = new Groq({ apiKey: cleanEnv("GROQ_API_KEY") });
 const supabase = createClient(cleanEnv("SUPABASE_URL"), cleanEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
+// Sites that block headless browsers — skip them
+const BLOCKED_SITES = [
+  "rippling.com", "deel.com", "gusto.com", "xero.com", "datadoghq.com",
+  "webflow.com", "clio.com", "clickup.com", "workday.com", "salesforce.com",
+  "hubspot.com", "zendesk.com", "intercom.com", "bamboohr.com"
+];
+
 const SYSTEM_PROMPT = `You are a world-class UX auditor and conversion strategist.
 Analyze the website content provided and return ONLY a valid JSON object with exactly these fields:
 {
@@ -28,20 +35,38 @@ Analyze the website content provided and return ONLY a valid JSON object with ex
 }
 Be brutally honest. A layman reading this should instantly understand the problems and opportunities.`;
 
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function runMasterAudit(target) {
+  // Skip known bot-blocking sites
+  const hostname = new URL(target.url).hostname.replace("www.", "");
+  if (BLOCKED_SITES.some(b => hostname.includes(b))) {
+    console.log(`[Skipped] ${target.name} — blocks headless browsers`);
+    return null;
+  }
+
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
   });
   const page = await browser.newPage();
   await page.setViewportSize({ width: 1280, height: 800 });
+
+  // Set a real user agent to avoid bot detection
+  await page.setExtraHTTPHeaders({
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  });
+
   const consoleErrors = [];
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
 
   try {
     console.log(`[Scanning] ${target.name} → ${target.url}`);
     const startTime = Date.now();
-    await page.goto(target.url, { waitUntil: 'networkidle', timeout: 45000 });
+
+    // Use domcontentloaded instead of networkidle — faster and more reliable
+    await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await sleep(2000); // Let JS render
     const loadTime = Date.now() - startTime;
 
     const pageData = await page.evaluate(() => ({
@@ -58,29 +83,43 @@ async function runMasterAudit(target) {
     const userContent = `
 Website: ${target.url}
 Title: ${pageData.title}
-Meta Description: ${pageData.metaDesc}
-H1 Headlines: ${pageData.h1s.join(' | ')}
-H2 Headlines: ${pageData.h2s.join(' | ')}
-CTA Buttons visible: ${pageData.ctaButtons.join(' | ')}
-Has pricing visible: ${pageData.hasPricing}
-Has social proof/testimonials: ${pageData.hasTestimonials}
-Page load time: ${loadTime}ms
+Meta: ${pageData.metaDesc}
+H1: ${pageData.h1s.join(' | ')}
+H2: ${pageData.h2s.join(' | ')}
+CTAs: ${pageData.ctaButtons.join(' | ')}
+Has pricing: ${pageData.hasPricing}
+Has testimonials: ${pageData.hasTestimonials}
+Load time: ${loadTime}ms
 Console errors: ${consoleErrors.length}
-Page content: ${pageData.text}
-Mission: ${target.mission}
+Content: ${pageData.text}
     `.trim();
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userContent }
-      ],
-      model: "llama-3.3-70b-versatile",
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-    });
+    // Retry on rate limit with exponential backoff
+    let report = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent }
+          ],
+          model: "llama-3.3-70b-versatile",
+          response_format: { type: "json_object" },
+          temperature: 0.3,
+        });
+        report = JSON.parse(completion.choices[0].message.content);
+        break;
+      } catch (e) {
+        if (e.message?.includes('429') && attempt < 2) {
+          const wait = (attempt + 1) * 15000; // 15s, 30s backoff
+          console.log(`  Rate limited — waiting ${wait/1000}s before retry...`);
+          await sleep(wait);
+        } else throw e;
+      }
+    }
 
-    const report = JSON.parse(completion.choices[0].message.content);
+    if (!report) throw new Error('Failed after 3 attempts');
+
     report.scanned_at = new Date().toISOString();
     report.load_time_ms = loadTime;
     report.console_errors = consoleErrors.length;
@@ -97,7 +136,6 @@ Mission: ${target.mission}
         mission: target.mission,
         target_name: target.name,
         errors: consoleErrors,
-        page_data: { title: pageData.title, hasPricing: pageData.hasPricing, hasTestimonials: pageData.hasTestimonials }
       }
     }]);
 
@@ -105,12 +143,12 @@ Mission: ${target.mission}
     return report;
 
   } catch (err) {
-    console.error(`❌ Failed ${target.name}: ${err.message}`);
+    console.error(`❌ Failed ${target.name}: ${err.message.split('\n')[0]}`);
     await supabase.from('pulse_logs').insert([{
       url: target.url,
       status: 'ERROR',
-      reasoning: `Scan failed: ${err.message}`,
-      metadata: { target_name: target.name, error: err.message }
+      reasoning: `Scan failed: ${err.message.split('\n')[0]}`,
+      metadata: { target_name: target.name, error: err.message.split('\n')[0] }
     }]);
   } finally {
     await browser.close();
@@ -129,7 +167,7 @@ async function run() {
     await runMasterAudit({
       name: new URL(targetArg).hostname,
       url: targetArg,
-      mission: 'Audit this website for UX friction, trust signals, conversion clarity and competitive weaknesses. Return authority_score, novice_summary, ux_friction_points, resolution_steps, strengths, revenue_opportunities, competitor_advantage, trust_score, conversion_score, mobile_readiness, target_audience_clarity, pricing_clarity, cta_effectiveness, industry.'
+      mission: 'Audit this website for UX friction, trust signals, conversion clarity and competitive weaknesses.'
     });
     return;
   }
@@ -140,15 +178,25 @@ async function run() {
     .eq('is_active', true);
 
   if (error) { console.error("DB Error:", error.message); process.exit(1); }
-  if (!targets?.length) { console.log("No active targets. Add rows to pulse_targets table."); return; }
+  if (!targets?.length) { console.log("No active targets."); return; }
 
-  console.log(`[Batch Mode] Scanning ${targets.length} targets...\n`);
-  for (const t of targets) {
+  // Filter out known blocked sites
+  const scannable = targets.filter(t => {
+    try {
+      const h = new URL(t.url).hostname.replace("www.", "");
+      return !BLOCKED_SITES.some(b => h.includes(b));
+    } catch { return false; }
+  });
+
+  console.log(`[Batch Mode] ${scannable.length}/${targets.length} scannable targets\n`);
+
+  for (const t of scannable) {
     await runMasterAudit(t);
-    await new Promise(r => setTimeout(r, 2000));
+    // 5 second delay between scans to avoid rate limiting
+    await sleep(5000);
   }
 
-  console.log(`\n✅ Done. ${targets.length} sites scanned.`);
+  console.log(`\n✅ Done. ${scannable.length} sites scanned.`);
 }
 
 run();
