@@ -6,10 +6,14 @@ on:
         description: 'Single URL to scan (leave empty for batch)'
         required: false
         default: ''
+      scan_mode:
+        description: 'Scan mode: standard or lam'
+        required: false
+        default: 'standard'
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,21 +21,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Node dependencies
         run: npm install
       - name: Install Playwright
         run: npx playwright install chromium --with-deps
+      - name: Install Python dependencies
+        run: |
+          pip install browser-use playwright python-dotenv supabase groq openai google-generativeai
+          playwright install chromium
       - name: Run scan
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}n          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}n          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ -n "${{ github.event.inputs.target_url }}" ]; then
-            echo "Single scan: ${{ github.event.inputs.target_url }}"
-            node agents/pulse-agent.js "${{ github.event.inputs.target_url }}"
+          TARGET="${{ github.event.inputs.target_url }}"
+          MODE="${{ github.event.inputs.scan_mode }}"
+          if [ "$MODE" = "lam" ] && [ -n "$TARGET" ]; then
+            echo "LAM scan: $TARGET"
+            python3 agents/lam-agent.py "$TARGET"
+          elif [ -n "$TARGET" ]; then
+            echo "Standard scan: $TARGET"
+            node agents/pulse-agent.js "$TARGET"
           else
             echo "Batch scan"
             node agents/pulse-agent.js
