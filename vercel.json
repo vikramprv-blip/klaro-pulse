@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/pulse", "destination": "/index.html" },
+    { "source": "/signin", "destination": "/signin.html" },
+    { "source": "/signup", "destination": "/signup.html" },
     { "source": "/ops", "destination": "/ops.html" },
     { "source": "/dashboard", "destination": "/ops.html" }
   ],
