@@ -28,7 +28,6 @@ import urllib.request
 
 def clean_json(text):
     text = text.strip()
-    # Remove code fences
     lines = text.split("\n")
     if lines and lines[0].startswith("```"):
         lines = lines[1:]
@@ -76,18 +75,30 @@ def call_provider(url, payload, headers):
 
 def call_llm(prompt):
     providers = []
-    if MISTRAL_KEY:
-        _mk = MISTRAL_KEY
-        providers.append(("Mistral", lambda _mk=_mk: json.loads(call_provider(
-            "https://api.mistral.ai/v1/chat/completions",
-            {"model": "mistral-large-latest", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {_mk}"}
+    if CEREBRAS_KEY:
+        providers.append(("Cerebras", lambda: json.loads(call_provider(
+            "https://api.cerebras.ai/v1/chat/completions",
+            {"model": "llama-3.3-70b", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
+            {"Authorization": f"Bearer {CEREBRAS_KEY}"}
         )["choices"][0]["message"]["content"])))
+    if SAMBANOVA_KEY:
+        providers.append(("SambaNova", lambda: json.loads(clean_json(call_provider(
+            "https://api.sambanova.ai/v1/chat/completions",
+            {"model": "Meta-Llama-3.3-70B-Instruct", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_schema", "json_schema": {"name": "report", "strict": True, "schema": {"type": "object", "properties": {}, "additionalProperties": True}}}, "temperature": 0.2, "max_tokens": 6000},
+            {"Authorization": f"Bearer {SAMBANOVA_KEY}"}
+        )["choices"][0]["message"]["content"]))))
     if GROQ_KEY:
         providers.append(("Groq", lambda: json.loads(call_provider(
             "https://api.groq.com/openai/v1/chat/completions",
             {"model": "meta-llama/llama-4-scout-17b-16e-instruct", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
             {"Authorization": f"Bearer {GROQ_KEY}"}
+        )["choices"][0]["message"]["content"])))
+    if MISTRAL_KEY:
+        mk = MISTRAL_KEY
+        providers.append(("Mistral", lambda mk=mk: json.loads(call_provider(
+            "https://api.mistral.ai/v1/chat/completions",
+            {"model": "mistral-large-latest", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
+            {"Authorization": f"Bearer {mk}"}
         )["choices"][0]["message"]["content"])))
     if DEEPSEEK_KEY:
         providers.append(("DeepSeek", lambda: json.loads(call_provider(
@@ -101,31 +112,6 @@ def call_llm(prompt):
             {"model": "meta-llama/llama-3.3-70b-instruct", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
             {"Authorization": f"Bearer {OPENROUTER_KEY}"}
         )["choices"][0]["message"]["content"]))))
-    if GEMINI_KEY:
-        providers.append(("Gemini", lambda: json.loads(clean_json(call_provider(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}",
-            {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2, "maxOutputTokens": 6000}},
-            {}
-        )["candidates"][0]["content"]["parts"][0]["text"]))))
-    if CEREBRAS_KEY:
-        providers.append(("Cerebras", lambda: json.loads(call_provider(
-            "https://api.cerebras.ai/v1/chat/completions",
-            {"model": "llama-3.3-70b", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {CEREBRAS_KEY}"}
-        )["choices"][0]["message"]["content"])))
-    if SAMBANOVA_KEY:
-        providers.append(("SambaNova", lambda: json.loads(clean_json(call_provider(
-            "https://api.sambanova.ai/v1/chat/completions",
-            {"model": "Meta-Llama-3.3-70B-Instruct", "messages": [{"role": "user", "content": prompt}], "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {SAMBANOVA_KEY}"}
-        )["choices"][0]["message"]["content"]))))
-    if MISTRAL_KEY:
-        mk = MISTRAL_KEY
-        providers.append(("Mistral", lambda mk=mk: json.loads(call_provider(
-            "https://api.mistral.ai/v1/chat/completions",
-            {"model": "mistral-large-latest", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {mk}"}
-        )["choices"][0]["message"]["content"])))
     if GH_MODELS_KEY:
         gk = GH_MODELS_KEY
         providers.append(("GitHubModels", lambda gk=gk: json.loads(call_provider(
@@ -151,41 +137,66 @@ def call_llm(prompt):
     raise Exception("All LLM providers failed")
 
 def get_lam_llm():
-    # Browser Use 0.12.6 uses its own native LLM classes
-    # Gemini first - best support for browser-use structured outputs
+    """
+    Browser-Use LLM selector.
+    Priority: Cerebras (llama-3.3-70b) -> SambaNova (Llama-3.3-70B) -> Groq fallback
+    Both Cerebras and SambaNova use OpenAI-compatible APIs with json_schema support.
+    """
+    # 1. Cerebras — fastest inference, free tier, llama-3.3-70b
     try:
-        from browser_use import ChatGoogle
-        if GEMINI_KEY:
-            import os
-            os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
-            llm = ChatGoogle(model="gemini-2.0-flash")
-            print("  Using Browser Use ChatGoogle (Gemini 2.0 Flash)")
+        from langchain_openai import ChatOpenAI
+        if CEREBRAS_KEY:
+            llm = ChatOpenAI(
+                model="llama-3.3-70b",
+                api_key=CEREBRAS_KEY,
+                base_url="https://api.cerebras.ai/v1",
+                temperature=0.2,
+                max_tokens=4000,
+            )
+            print("  Using Cerebras (llama-3.3-70b) for Browser Use")
             return llm
     except Exception as e:
-        print(f"  ChatGoogle failed: {e}")
-    # Groq fallback
+        print(f"  Cerebras browser-use failed: {e}")
+
+    # 2. SambaNova — OpenAI-compatible, json_schema support
+    try:
+        from langchain_openai import ChatOpenAI
+        if SAMBANOVA_KEY:
+            llm = ChatOpenAI(
+                model="Meta-Llama-3.3-70B-Instruct",
+                api_key=SAMBANOVA_KEY,
+                base_url="https://api.sambanova.ai/v1",
+                temperature=0.2,
+                max_tokens=4000,
+            )
+            print("  Using SambaNova (Llama-3.3-70B-Instruct) for Browser Use")
+            return llm
+    except Exception as e:
+        print(f"  SambaNova browser-use failed: {e}")
+
+    # 3. Groq — last resort, smaller model but reliable
     try:
         from browser_use import ChatGroq
         if GROQ_KEY:
-            import os
             os.environ["GROQ_API_KEY"] = GROQ_KEY
             llm = ChatGroq(model="llama-3.1-8b-instant")
-            print("  Using Browser Use ChatGroq (llama-3.1-8b-instant)")
+            print("  Using Groq (llama-3.1-8b-instant) for Browser Use")
             return llm
     except Exception as e:
-        print(f"  ChatGroq failed: {e}")
-    # OpenAI last
+        print(f"  Groq browser-use failed: {e}")
+
+    # 4. OpenAI last resort
     try:
         from browser_use import ChatOpenAI
         if OPENAI_KEY:
-            import os
             os.environ["OPENAI_API_KEY"] = OPENAI_KEY
             llm = ChatOpenAI(model="gpt-4o-mini")
-            print("  Using Browser Use ChatOpenAI (gpt-4o-mini)")
+            print("  Using OpenAI (gpt-4o-mini) for Browser Use")
             return llm
     except Exception as e:
-        print(f"  ChatOpenAI failed: {e}")
-    raise Exception("No LLM available for Browser Use")
+        print(f"  OpenAI browser-use failed: {e}")
+
+    raise Exception("No LLM available for Browser Use — set CEREBRAS_API_KEY or SAMBANOVA_API_KEY")
 
 def extract_json(text):
     try:
@@ -243,7 +254,7 @@ Return as JSON object."""
         experience_data = extract_json(result1)
         pages_visited = experience_data.get("pages_visited", [])
         print(f"  Pages visited: {len(pages_visited)}")
-        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
+        await asyncio.sleep(10)
 
         print("\n[Task 2/6] Attempting to contact/convert...")
         task2 = f"""Visit {target_url} and try to become a customer. Find and attempt: contact form, phone number, email, booking system, main CTA.
@@ -251,7 +262,7 @@ Return JSON with: contact_form, phone_number, email_address, booking_system, mai
         result2 = await run_browser_task(task2, llm, 25)
         conversion_data = extract_json(result2)
         print("  Conversion data collected")
-        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
+        await asyncio.sleep(10)
 
         print("\n[Task 3/6] Testing signin/signup flow...")
         task3 = f"""Visit {target_url} and test account creation and login. Find signup and signin pages. Note all fields, steps, errors, social login options.
@@ -259,7 +270,7 @@ DO NOT complete signup. Return JSON with: signup object, signin object, auth_ove
         result3 = await run_browser_task(task3, llm, 20)
         signup_data = extract_json(result3)
         print("  Auth flow tested")
-        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
+        await asyncio.sleep(10)
 
         print("\n[Task 4/6] ADA/WCAG accessibility audit...")
         task4 = f"""Visit {target_url} and conduct ADA/WCAG 2.1 AA audit. Check: alt text, form labels, color contrast, keyboard navigation, heading structure, focus indicators, skip navigation, ARIA labels, font sizes, touch targets.
@@ -267,7 +278,7 @@ Return JSON with: ada_score, wcag_level, critical_violations array, specific cou
         result4 = await run_browser_task(task4, llm, 25)
         ada_data = extract_json(result4)
         print(f"  ADA score: {ada_data.get('ada_score', 'N/A')}")
-        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
+        await asyncio.sleep(10)
 
         print("\n[Task 5/6] SOC/Security public page audit...")
         task5 = f"""Visit {target_url} and audit public security and compliance signals. Check: HTTPS, cookie consent, privacy policy, terms of service, third party trackers, GDPR/CCPA/India DPDP signals, SOC2 claims, security page, status page.
@@ -275,7 +286,7 @@ Return JSON with: soc_score, https_enforced, cookie_consent, privacy_policy, gdp
         result5 = await run_browser_task(task5, llm, 20)
         soc_data = extract_json(result5)
         print(f"  SOC score: {soc_data.get('soc_score', 'N/A')}")
-        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
+        await asyncio.sleep(10)
 
     else:
         experience_data = {"error": "browser_unavailable"}
@@ -331,23 +342,25 @@ strengths (array), mobile_readiness, pricing_clarity, cta_effectiveness, load_sp
 
     score = report.get("overall_score", 50)
     user_id = os.getenv("LAM_USER_ID", None)
-    # Check for existing pending run to update instead of creating new
+
     existing_run_id = None
     try:
-        check_url = f"{SUPABASE_URL}/rest/v1/lam_runs?url=eq.{target_url}&status=eq.pending&order=created_at.desc&limit=1"
-        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        resp = __import__('requests').get(check_url, headers=headers)
-        runs = resp.json()
+        import urllib.parse
+        encoded_url = urllib.parse.quote(target_url, safe='')
+        check_url = f"{SUPABASE_URL}/rest/v1/lam_runs?url=eq.{encoded_url}&status=eq.pending&order=created_at.desc&limit=1"
+        check_req = urllib.request.Request(check_url)
+        check_req.add_header("apikey", SUPABASE_KEY)
+        check_req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        resp = urllib.request.urlopen(check_req)
+        runs = json.loads(resp.read())
         if runs and len(runs) > 0:
             existing_run_id = runs[0]['id']
             print(f"  Found existing pending run: {existing_run_id}")
     except Exception as e:
         print(f"  Could not check existing runs: {e}")
 
-    if existing_run_id:
-        run_id = existing_run_id
-        supabase_update(run_id, {
-            "status": "complete",
+    result_data = {
+        "status": "complete",
         "overall_score": score,
         "grade": report.get("grade", "C"),
         "lam_score": report.get("lam_score", score),
@@ -363,27 +376,16 @@ strengths (array), mobile_readiness, pricing_clarity, cta_effectiveness, load_sp
         "raw_data": report.get("lam_raw", {}),
         "triggered_by": os.getenv("LAM_TRIGGERED_BY", "manual"),
         "completed_at": datetime.now().isoformat()
-    })
+    }
+
+    if existing_run_id:
+        run_id = existing_run_id
+        supabase_update(run_id, result_data)
     else:
         run_id = supabase_insert({
             "url": target_url,
             "user_id": user_id,
-            "status": "complete",
-            "overall_score": score,
-            "grade": report.get("grade", "C"),
-            "lam_score": report.get("lam_score", score),
-            "ada_score": report.get("ada_score", 50),
-            "soc_score": report.get("soc_score", 50),
-            "executive_brief": report.get("executive_brief", {}),
-            "client_experience": report.get("client_experience_report", {}),
-            "ada_report": report.get("ada_compliance_report", {}),
-            "soc_report": report.get("soc_compliance_report", {}),
-            "competitive_intel": report.get("competitive_intelligence", {}),
-            "roadmap": report.get("ninety_day_roadmap", {}),
-            "strengths": report.get("strengths", []),
-            "raw_data": report.get("lam_raw", {}),
-            "triggered_by": os.getenv("LAM_TRIGGERED_BY", "manual"),
-            "completed_at": datetime.now().isoformat()
+            **result_data
         })
 
     print("\n" + "="*60)
@@ -391,6 +393,7 @@ strengths (array), mobile_readiness, pricing_clarity, cta_effectiveness, load_sp
     print(f"Overall: {score}/100 | Grade: {report.get('grade')} | Run ID: {run_id}")
     print(f"ADA: {report.get('ada_score')}/100 | SOC: {report.get('soc_score')}/100")
     print(f"Conversion: {report.get('conversion_score')}/100 | Auth: {report.get('auth_score')}/100")
+    print(f"LLM chain: Cerebras -> SambaNova -> Groq -> OpenAI")
     print("="*60)
     return report
 
