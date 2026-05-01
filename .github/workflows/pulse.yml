@@ -30,7 +30,15 @@ jobs:
       - name: Install Playwright
         run: npx playwright install chromium --with-deps
       - name: Install Python dependencies
-        run: pip install browser-use playwright python-dotenv supabase groq openai google-generativeai langchain-google-genai langchain-openai langchain-groq
+        run: |
+          pip install --upgrade pip
+          pip install browser-use
+          pip install langchain-openai
+          pip install langchain-groq
+          pip install langchain-google-genai
+          pip install openai
+          pip install playwright python-dotenv supabase groq google-generativeai
+          pip show browser-use | grep Version
       - name: Run scan
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
