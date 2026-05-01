@@ -1,0 +1,58 @@
+name: Weekly Site Intelligence Scan
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday 6am UTC (11:30am IST)
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - url: https://klaro.services
+            mode: lam
+          - url: https://nomadpilot.app
+            mode: lam
+          - url: https://layla.ai
+            mode: lam
+          - url: https://mindtrip.ai
+            mode: lam
+          - url: https://clio.com
+            mode: lam
+          - url: https://vakil.com
+            mode: lam
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd agents
+          pip install -r requirements.txt --break-system-packages
+      - name: Run LAM scan
+        env:
+          TARGET_URL: ${{ matrix.url }}
+          SCAN_MODE: ${{ matrix.mode }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          GH_MODELS_KEY: ${{ secrets.GH_MODELS_KEY }}
+          SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
+          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+          SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd agents
+          python lam-agent.py
+
+  notify:
+    needs: scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send weekly email report
+        run: |
+          curl -s -X POST https://klaro.services/api/pulse/weekly-report \
+            -H "Content-Type: application/json" \
+            -d '{"secret":"${{ secrets.WEEKLY_REPORT_SECRET }}"}'

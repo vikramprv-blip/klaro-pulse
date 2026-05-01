@@ -1,0 +1,22 @@
+name: Weekly Backup Tag
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create weekly backup tag
+        run: |
+          DATE=$(date +%Y%m%d)
+          git config user.email "backup@klaro.services"
+          git config user.name "Klaro Backup Bot"
+          git tag -a "weekly-backup-${DATE}" -m "Automated weekly backup ${DATE}"
+          git push origin "weekly-backup-${DATE}"
+          echo "✅ Backup tag weekly-backup-${DATE} created"
