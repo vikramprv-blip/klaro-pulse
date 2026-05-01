@@ -21,6 +21,8 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
 DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
 SAMBANOVA_KEY = os.getenv("SAMBANOVA_API_KEY", "")
+MISTRAL_KEY = os.getenv("MISTRAL_API_KEY", "")
+GH_MODELS_KEY = os.getenv("GH_MODELS_KEY", "")
 
 import urllib.request
 
@@ -77,7 +79,7 @@ def call_llm(prompt):
     if GROQ_KEY:
         providers.append(("Groq", lambda: json.loads(call_provider(
             "https://api.groq.com/openai/v1/chat/completions",
-            {"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
+            {"model": "llama3-groq-70b-8192-tool-use-preview", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
             {"Authorization": f"Bearer {GROQ_KEY}"}
         )["choices"][0]["message"]["content"])))
     if DEEPSEEK_KEY:
@@ -149,8 +151,8 @@ def get_lam_llm():
         if GROQ_KEY:
             import os
             os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="llama-3.3-70b-versatile")
-            print("  Using Browser Use ChatGroq (llama-3.3-70b-versatile)")
+            llm = ChatGroq(model="llama3-groq-70b-8192-tool-use-preview")
+            print("  Using Browser Use ChatGroq (llama3-groq-70b-8192-tool-use-preview)")
             return llm
     except Exception as e:
         print(f"  ChatGroq failed: {e}")
