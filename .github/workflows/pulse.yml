@@ -32,10 +32,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install langchain-groq langchain-google-genai langchain-openai
-          pip install playwright python-dotenv supabase google-generativeai
           pip install browser-use==0.12.6
-          pip install groq==1.0.0 openai==2.16.0
+          pip install playwright python-dotenv supabase google-generativeai
           pip show browser-use | grep Version
       - name: Run scan
         env:
