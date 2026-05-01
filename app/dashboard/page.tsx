@@ -46,9 +46,8 @@ export default function Dashboard() {
       if (!user) { window.location.href = '/signin'; return }
       setUser(user)
       sb.from('pulse_users').select('*').eq('id', user.id).single()
-        .then(({ data, error }) => {
-          if (data) setProfile(data)
-          else setProfile({ plan: 'trial', scans_used_this_month: 0 })
+        .then(({ data }) => {
+          setProfile(data || { plan: 'trial', scans_used_this_month: 0 })
           setProfileLoaded(true)
         })
     })
@@ -79,7 +78,6 @@ export default function Dashboard() {
 
   const plan = profile?.plan || 'trial'
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.trial
-
   const isLocked = (feature: string) => {
     if (!profileLoaded) return false
     if (feature === 'bulk') return !limits.bulk
@@ -92,37 +90,60 @@ export default function Dashboard() {
     setScanning(true)
     setScanStatus({ msg: `Queuing scan for ${url}...`, type: 'scanning' })
     try {
+      // Step 1 — create pending scan row
       const { data: scanRow } = await sb.from('pulse_scans').insert({
-        user_id: user.id, url, scan_type: scanType, status: 'pending',
-        progress: 0, progress_message: 'Queued — starting shortly...'
+        user_id: user.id, url, scan_type: scanType,
+        status: 'pending', progress: 0, progress_message: 'Queued...'
       }).select().single()
 
-      const res = await fetch('https://klaro.services/api/pulse/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_url: url, scan_mode: scanType, scan_id: scanRow?.id })
-      })
-      const data = await res.json()
-      if (data.ok) {
-        setScanStatus({ msg: `✅ ${data.message}`, type: 'success' })
-        await sb.from('pulse_users').update({
-          scans_used_this_month: (profile?.scans_used_this_month || 0) + 1
-        }).eq('id', user.id)
-        setProfile((p: any) => ({ ...p, scans_used_this_month: (p?.scans_used_this_month || 0) + 1 }))
+      if (!scanRow) throw new Error('Could not create scan record')
+
+      if (scanType === 'lam') {
+        // LAM → GitHub Actions
+        const res = await fetch('/api/pulse/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target_url: url, scan_mode: 'lam', scan_id: scanRow.id })
+        })
+        const data = await res.json()
+        if (data.ok) {
+          setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
+        } else {
+          throw new Error(data.error || 'LAM trigger failed')
+        }
       } else {
-        setScanStatus({ msg: `❌ ${data.error || 'Trigger failed'}`, type: 'error' })
-        if (scanRow?.id) await sb.from('pulse_scans').update({ status: 'error', error_text: data.error }).eq('id', scanRow.id)
+        // LLM → Vercel serverless (fast, no GitHub needed)
+        setScanStatus({ msg: `⏳ Scanning ${url} — this takes 30-60 seconds...`, type: 'scanning' })
+        const res = await fetch('/api/pulse/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scan_id: scanRow.id, url })
+        })
+        const data = await res.json()
+        if (data.ok) {
+          setScanStatus({ msg: `✅ Scan complete — score: ${data.score}/100`, type: 'success' })
+          await sb.from('pulse_users').update({
+            scans_used_this_month: (profile?.scans_used_this_month || 0) + 1
+          }).eq('id', user.id)
+          setProfile((p: any) => ({ ...p, scans_used_this_month: (p?.scans_used_this_month || 0) + 1 }))
+        } else {
+          throw new Error(data.error || 'Scan failed')
+        }
       }
     } catch (e: any) {
       setScanStatus({ msg: `❌ ${e.message}`, type: 'error' })
     }
     setScanning(false)
-    setTimeout(() => setScanStatus(null), 8000)
+    setTimeout(() => setScanStatus(null), 10000)
     loadScans()
   }
 
   async function cancelScan(scanId: string) {
-    await sb.from('pulse_scans').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', scanId)
+    await fetch('/api/pulse/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scan_id: scanId })
+    })
     loadScans()
   }
 
@@ -179,7 +200,7 @@ export default function Dashboard() {
         <div style={S.topLogo}>KLARO <span style={S.accent}>PULSE</span></div>
         <div style={S.topRight}>
           {plan === 'trial' && trialDaysLeft !== null && trialDaysLeft < 9999 && (
-            <div style={S.trialBadge}>{trialDaysLeft}d trial · <a href="/settings" style={{color:'#818cf8'}}>Upgrade</a></div>
+            <div style={S.trialBadge}>{trialDaysLeft}d trial · <a href="/settings" style={{ color: '#818cf8' }}>Upgrade</a></div>
           )}
           {plan !== 'trial' && <div style={S.planBadge}>{limits.label}</div>}
           <div style={S.userPill}>
@@ -196,10 +217,10 @@ export default function Dashboard() {
           <div style={S.scanBarTop}>
             <div style={S.scanBarTitle}>🔍 Scan any website</div>
             <div style={S.tabs}>
-              {(['llm','compare','bulk','lam'] as const).map(m => (
+              {(['llm', 'compare', 'bulk', 'lam'] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
-                  style={{...S.tab, ...(mode===m?S.tabActive:{}), ...(isLocked(m)?S.tabLocked:{})}}>
-                  {m==='llm'?'Single Site':m==='compare'?'Compare':m==='bulk'?'Bulk':'LAM Audit'}
+                  style={{ ...S.tab, ...(mode === m ? S.tabActive : {}), ...(isLocked(m) ? S.tabLocked : {}) }}>
+                  {m === 'llm' ? 'Single Site' : m === 'compare' ? 'Compare' : m === 'bulk' ? 'Bulk' : 'LAM Audit'}
                   {isLocked(m) && ' 🔒'}
                 </button>
               ))}
@@ -208,61 +229,69 @@ export default function Dashboard() {
 
           {isLocked(mode) ? (
             <div style={S.upgradeBox}>
-              <div style={{fontWeight:700,color:'white',marginBottom:'6px'}}>
-                {mode==='lam'?'🤖 LAM Audit — Agency plan ($599/mo)':mode==='bulk'?'⚡ Bulk scanning — Growth plan ($399/mo)':'📊 Compare — Starter plan ($149/mo)'}
+              <div style={{ fontWeight: 700, color: 'white', marginBottom: '6px' }}>
+                {mode === 'lam' ? '🤖 LAM Audit — Agency plan ($599/mo)' : mode === 'bulk' ? '⚡ Bulk scanning — Growth plan ($399/mo)' : '📊 Compare — Starter plan ($149/mo)'}
               </div>
-              <div style={{fontSize:'12px',color:'#64748b',marginBottom:'12px'}}>
-                {mode==='lam'?'AI visits your site as a real client. Full ADA, SOC & conversion audit. 8-12 min.':mode==='bulk'?'Scan multiple sites at once. Perfect for agencies.':'Side-by-side scores. Perfect for prospect meetings.'}
+              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                {mode === 'lam' ? 'AI visits your site as a real client. Full ADA, SOC & conversion audit.' : mode === 'bulk' ? 'Scan multiple sites at once. Perfect for agencies.' : 'Side-by-side scores. Perfect for prospect meetings.'}
               </div>
               <a href="/settings" style={S.upgradeBtn}>Upgrade Plan →</a>
             </div>
           ) : (
             <>
-              {mode==='llm' && (
+              {mode === 'llm' && (
                 <div style={S.inputRow}>
                   <input style={S.urlInput} type="url" placeholder="https://anywebsite.com" value={urlInput}
-                    onChange={e=>setUrlInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleScan()} />
-                  <button style={S.scanBtn} onClick={handleScan} disabled={scanning}>{scanning?'Queuing...':'Scan Now →'}</button>
+                    onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !scanning && handleScan()} />
+                  <button style={{ ...S.scanBtn, opacity: scanning ? 0.7 : 1 }} onClick={handleScan} disabled={scanning}>
+                    {scanning ? '⏳ Scanning...' : 'Scan Now →'}
+                  </button>
                 </div>
               )}
-              {mode==='compare' && (
+              {mode === 'compare' && (
                 <div>
-                  {compareUrls.map((u,i)=>(
-                    <input key={i} style={{...S.urlInput,marginBottom:'8px',width:'100%',boxSizing:'border-box'}}
-                      placeholder={i===0?'https://your-site.com':`https://competitor${i}.com`}
-                      value={u} onChange={e=>{const n=[...compareUrls];n[i]=e.target.value;setCompareUrls(n)}} />
+                  {compareUrls.map((u, i) => (
+                    <input key={i} style={{ ...S.urlInput, marginBottom: '8px', width: '100%', boxSizing: 'border-box' as const }}
+                      placeholder={i === 0 ? 'https://your-site.com' : `https://competitor${i}.com`}
+                      value={u} onChange={e => { const n = [...compareUrls]; n[i] = e.target.value; setCompareUrls(n) }} />
                   ))}
-                  <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                     {compareUrls.length < limits.compare && (
-                      <button style={S.ghostBtn} onClick={()=>setCompareUrls([...compareUrls,''])}>+ Add URL</button>
+                      <button style={S.ghostBtn} onClick={() => setCompareUrls([...compareUrls, ''])}>+ Add URL</button>
                     )}
-                    <button style={S.scanBtn} onClick={handleScan} disabled={scanning}>Compare All →</button>
+                    <button style={S.scanBtn} onClick={handleScan} disabled={scanning}>
+                      {scanning ? '⏳ Scanning...' : 'Compare All →'}
+                    </button>
                   </div>
                 </div>
               )}
-              {mode==='bulk' && (
+              {mode === 'bulk' && (
                 <div>
-                  <textarea style={{...S.urlInput,height:'100px',resize:'vertical',width:'100%',boxSizing:'border-box'}}
+                  <textarea style={{ ...S.urlInput, height: '100px', resize: 'vertical' as const, width: '100%', boxSizing: 'border-box' as const }}
                     placeholder={'https://site1.com\nhttps://site2.com\nhttps://site3.com'}
-                    value={bulkText} onChange={e=>setBulkText(e.target.value)} />
-                  <button style={{...S.scanBtn,marginTop:'8px'}} onClick={handleScan} disabled={scanning}>Run Bulk Scan →</button>
+                    value={bulkText} onChange={e => setBulkText(e.target.value)} />
+                  <button style={{ ...S.scanBtn, marginTop: '8px' }} onClick={handleScan} disabled={scanning}>
+                    {scanning ? '⏳ Scanning...' : 'Run Bulk Scan →'}
+                  </button>
                 </div>
               )}
-              {mode==='lam' && (
+              {mode === 'lam' && (
                 <div>
-                  <div style={{fontSize:'12px',color:'#64748b',marginBottom:'10px'}}>
-                    AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
+                    🤖 AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
                   </div>
                   <div style={S.inputRow}>
                     <input style={S.urlInput} type="url" placeholder="https://yoursite.com" value={lamUrl}
-                      onChange={e=>setLamUrl(e.target.value)} />
-                    <button style={{...S.scanBtn,background:'linear-gradient(135deg,#7c3aed,#a855f7)'}}
-                      onClick={handleScan} disabled={scanning}>{scanning?'Queuing...':'Run LAM Audit →'}</button>
+                      onChange={e => setLamUrl(e.target.value)} />
+                    <button style={{ ...S.scanBtn, background: 'linear-gradient(135deg,#7c3aed,#a855f7)' }}
+                      onClick={handleScan} disabled={scanning}>
+                      {scanning ? '⏳ Queuing...' : 'Run LAM Audit →'}
+                    </button>
                   </div>
                 </div>
               )}
               {scanStatus && (
-                <div style={{...S.statusBar,...(scanStatus.type==='error'?S.statusError:scanStatus.type==='success'?S.statusSuccess:S.statusScanning)}}>
+                <div style={{ ...S.statusBar, ...(scanStatus.type === 'error' ? S.statusError : scanStatus.type === 'success' ? S.statusSuccess : S.statusScanning) }}>
                   {scanStatus.msg}
                 </div>
               )}
@@ -272,168 +301,171 @@ export default function Dashboard() {
 
         <div style={S.statsRow}>
           {[
-            {val:scans.length+lamRuns.length,label:'Total Scans',color:'#818cf8'},
-            {val:avgScore||'—',label:'Avg Score',color:'#4ade80',sub:'out of 100'},
-            {val:scans.filter(s=>(s.overall_score||0)<50&&s.status==='complete').length,label:'Need Urgent Fix',color:'#f87171',sub:'score below 50'},
-            {val:allItems.filter(s=>s.status==='pending'||s.status==='scanning').length,label:'In Progress',color:'#fbbf24'},
-          ].map(({val,label,color,sub})=>(
+            { val: scans.length + lamRuns.length, label: 'Total Scans', color: '#818cf8' },
+            { val: avgScore || '—', label: 'Avg Score', color: '#4ade80', sub: 'out of 100' },
+            { val: scans.filter(s => (s.overall_score || 0) < 50 && s.status === 'complete').length, label: 'Need Urgent Fix', color: '#f87171', sub: 'score below 50' },
+            { val: allItems.filter(s => s.status === 'pending' || s.status === 'scanning').length, label: 'In Progress', color: '#fbbf24' },
+          ].map(({ val, label, color, sub }) => (
             <div key={label} style={S.statCard}>
-              <div style={{...S.statVal,color}}>{val}</div>
+              <div style={{ ...S.statVal, color }}>{val}</div>
               <div style={S.statLabel}>{label}</div>
-              {sub&&<div style={S.statSub}>{sub}</div>}
+              {sub && <div style={S.statSub}>{sub}</div>}
             </div>
           ))}
         </div>
 
         <div style={S.filterRow}>
           <span style={S.filterLabel}>Filter:</span>
-          {[['all','All'],['strong','Strong (75+)'],['needs','Needs Work'],['critical','Critical (<50)'],['error','Errors'],['lam','LAM Only']].map(([val,label])=>(
-            <button key={val} style={{...S.filterBtn,...(filter===val?S.filterBtnActive:{})}} onClick={()=>setFilter(val)}>{label}</button>
+          {[['all', 'All'], ['strong', 'Strong (75+)'], ['needs', 'Needs Work'], ['critical', 'Critical (<50)'], ['error', 'Errors'], ['lam', 'LAM Only']].map(([val, label]) => (
+            <button key={val} style={{ ...S.filterBtn, ...(filter === val ? S.filterBtnActive : {}) }}
+              onClick={() => setFilter(val)}>{label}</button>
           ))}
-          <input style={S.searchInput} placeholder="Search URLs..." value={search} onChange={e=>setSearch(e.target.value)} />
+          <input style={S.searchInput} placeholder="Search URLs..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
         <div>
-          {filtered.length===0 && (
+          {filtered.length === 0 && (
             <div style={S.empty}>
-              <div style={{fontSize:'48px',marginBottom:'16px'}}>📡</div>
-              <div style={{fontSize:'18px',fontWeight:700,color:'#334155',marginBottom:'8px'}}>
-                {allItems.length===0?'No scans yet':'No results for this filter'}
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📡</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                {allItems.length === 0 ? 'No scans yet' : 'No results for this filter'}
               </div>
-              <div style={{fontSize:'13px'}}>{allItems.length===0?'Enter a URL above and click Scan Now':'Try a different filter'}</div>
+              <div style={{ fontSize: '13px' }}>{allItems.length === 0 ? 'Enter a URL above and click Scan Now' : 'Try a different filter'}</div>
             </div>
           )}
 
           {filtered.map(item => {
-            const isLam = item._type==='lam'
-            const score = item.overall_score||0
-            const isPending = item.status==='pending'||item.status==='scanning'
+            const isLam = item._type === 'lam'
+            const score = item.overall_score || 0
+            const isPending = item.status === 'pending' || item.status === 'scanning'
             const isExpanded = expandedCards.has(item.id)
-            const r = item.report||{}
-            const name = (()=>{ try { return new URL(item.url).hostname } catch { return item.url } })()
+            const r = item.report || {}
+            const name = (() => { try { return new URL(item.url).hostname } catch { return item.url } })()
 
             return (
               <div key={item.id} style={S.card}>
                 <div style={S.cardHeader}>
-                  <div style={{flex:1}}>
+                  <div style={{ flex: 1 }}>
                     <div style={S.cardName}>{name}</div>
                     <a href={item.url} target="_blank" rel="noreferrer" style={S.cardUrl}>{item.url}</a>
                     <div style={S.cardMeta}>
-                      {ago(item.created_at)} · <span style={{color:isPending?'#fbbf24':item.status==='complete'?'#4ade80':item.status==='error'?'#f87171':'#475569'}}>{item.status}</span>
-                      {isLam&&<span style={{color:'#a78bfa',fontWeight:700}}> · LAM AUDIT</span>}
-                      {item.scan_type==='compare'&&<span style={{color:'#60a5fa',fontWeight:700}}> · COMPARE</span>}
-                      {item.scan_type==='bulk'&&<span style={{color:'#34d399',fontWeight:700}}> · BULK</span>}
+                      {ago(item.created_at)} · <span style={{ color: isPending ? '#fbbf24' : item.status === 'complete' ? '#4ade80' : item.status === 'error' ? '#f87171' : '#475569' }}>{item.status}</span>
+                      {isLam && <span style={{ color: '#a78bfa', fontWeight: 700 }}> · LAM</span>}
+                      {item.scan_type === 'compare' && <span style={{ color: '#60a5fa', fontWeight: 700 }}> · COMPARE</span>}
+                      {item.scan_type === 'bulk' && <span style={{ color: '#34d399', fontWeight: 700 }}> · BULK</span>}
                     </div>
                     {isPending && (
                       <div style={S.progressWrap}>
                         <div style={S.progressTrack}>
-                          <div style={{...S.progressFill,width:`${item.progress||5}%`}} />
+                          <div style={{ ...S.progressFill, width: `${item.progress || 5}%` }} />
                         </div>
-                        <div style={{fontSize:'11px',color:'#64748b'}}>{item.progress_message||'Starting...'}</div>
-                        <button style={S.cancelBtn} onClick={()=>cancelScan(item.id)}>✕ Cancel</button>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{item.progress_message || 'Starting...'}</div>
+                        <button style={S.cancelBtn} onClick={() => cancelScan(item.id)}>✕ Cancel</button>
                       </div>
                     )}
                   </div>
-                  {!isPending&&score>0&&(
-                    <div style={{textAlign:'center',flexShrink:0}}>
-                      <div style={{...S.scoreRing,borderColor:scBorder(score),color:sc(score)}}>
-                        <div style={{fontSize:'22px',fontWeight:900,lineHeight:1}}>{score}</div>
-                        <div style={{fontSize:'9px',opacity:0.6,fontWeight:700,textTransform:'uppercase'}}>/100</div>
+                  {!isPending && score > 0 && (
+                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                      <div style={{ ...S.scoreRing, borderColor: scBorder(score), color: sc(score) }}>
+                        <div style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1 }}>{score}</div>
+                        <div style={{ fontSize: '9px', opacity: 0.6, fontWeight: 700, textTransform: 'uppercase' as const }}>/100</div>
                       </div>
-                      {item.grade&&<div style={{fontSize:'10px',color:'#475569',marginTop:'4px',fontWeight:700}}>Grade {item.grade}</div>}
+                      {item.grade && <div style={{ fontSize: '10px', color: '#475569', marginTop: '4px', fontWeight: 700 }}>Grade {item.grade}</div>}
                     </div>
                   )}
                 </div>
 
-                {!isPending&&item.status==='complete'&&(
+                {!isPending && item.status === 'complete' && (
                   <>
-                    {!isLam&&(
+                    {!isLam && (
                       <div style={S.bars}>
-                        {[['Trust',item.trust_score],['Conversion',item.conversion_score],['Security',item.security_score],['Mobile',item.mobile_score]].map(([label,val])=>(
-                          val?<div key={label as string} style={S.barItem}>
-                            <div style={S.barLabel}><span>{label}</span><span style={{color:sc(val as number)}}>{val}/100</span></div>
-                            <div style={S.barTrack}><div style={{...S.barFill,width:`${val}%`,background:sc(val as number)}}/></div>
-                          </div>:null
+                        {[['Trust', item.trust_score], ['Conversion', item.conversion_score], ['Security', item.security_score], ['Mobile', item.mobile_score]].map(([label, val]) => (
+                          val ? <div key={label as string} style={S.barItem}>
+                            <div style={S.barLabel}><span>{label}</span><span style={{ color: sc(val as number) }}>{val}/100</span></div>
+                            <div style={S.barTrack}><div style={{ ...S.barFill, width: `${val}%`, background: sc(val as number) }} /></div>
+                          </div> : null
                         ))}
                       </div>
                     )}
-                    {isLam&&(
+                    {isLam && (
                       <div style={S.bars}>
-                        {[['LAM',item.lam_score],['ADA',item.ada_score],['SOC',item.soc_score],['Conversion',item.conversion_score]].map(([label,val])=>(
-                          val?<div key={label as string} style={S.barItem}>
-                            <div style={S.barLabel}><span>{label}</span><span style={{color:sc(val as number)}}>{val}/100</span></div>
-                            <div style={S.barTrack}><div style={{...S.barFill,width:`${val}%`,background:sc(val as number)}}/></div>
-                          </div>:null
+                        {[['LAM', item.lam_score], ['ADA', item.ada_score], ['SOC', item.soc_score], ['Conversion', item.conversion_score]].map(([label, val]) => (
+                          val ? <div key={label as string} style={S.barItem}>
+                            <div style={S.barLabel}><span>{label}</span><span style={{ color: sc(val as number) }}>{val}/100</span></div>
+                            <div style={S.barTrack}><div style={{ ...S.barFill, width: `${val}%`, background: sc(val as number) }} /></div>
+                          </div> : null
                         ))}
                       </div>
                     )}
 
-                    {(item.executive_brief?.one_line_verdict||item.executive_brief?.plain_english_summary||r.novice_summary||r.one_line_verdict)&&(
+                    {(r.one_line_verdict || r.novice_summary || item.executive_brief?.one_line_verdict) && (
                       <div style={S.summary}>
-                        {item.executive_brief?.one_line_verdict||item.executive_brief?.plain_english_summary||r.novice_summary||r.one_line_verdict}
+                        {r.one_line_verdict || r.novice_summary || item.executive_brief?.one_line_verdict}
                       </div>
                     )}
 
-                    {isExpanded&&!isLam&&r&&(
+                    {isExpanded && !isLam && (
                       <div style={S.detail}>
                         <div style={S.detailGrid}>
                           <div>
-                            <div style={{...S.detailHead,color:'#f87171'}}>🔴 Problems Found</div>
-                            {(r.ux_friction_points||[]).map((p:string,i:number)=>(
+                            <div style={{ ...S.detailHead, color: '#f87171' }}>🔴 Problems Found</div>
+                            {(r.ux_friction_points || []).map((p: string, i: number) => (
                               <div key={i} style={S.detailItem}>⚠ {p}</div>
                             ))}
-                            {!(r.ux_friction_points||[]).length&&<div style={{...S.detailItem,color:'#334155'}}>None detected</div>}
+                            {!(r.ux_friction_points || []).length && <div style={{ ...S.detailItem, color: '#334155' }}>None detected</div>}
                           </div>
                           <div>
-                            <div style={{...S.detailHead,color:'#4ade80'}}>🟢 How to Fix</div>
-                            {(r.resolution_steps||[]).map((p:string,i:number)=>(
-                              <div key={i} style={S.detailItem}><span style={{color:'#4ade80',fontWeight:700}}>0{i+1}</span> {p}</div>
+                            <div style={{ ...S.detailHead, color: '#4ade80' }}>🟢 How to Fix</div>
+                            {(r.resolution_steps || []).map((p: string, i: number) => (
+                              <div key={i} style={S.detailItem}><span style={{ color: '#4ade80', fontWeight: 700 }}>0{i + 1}</span> {p}</div>
                             ))}
                           </div>
                           <div>
-                            <div style={{...S.detailHead,color:'#fbbf24'}}>💰 Revenue Opportunities</div>
-                            {(r.revenue_opportunities||[]).map((p:string,i:number)=>(
-                              <div key={i} style={S.detailItem}>�� {p}</div>
+                            <div style={{ ...S.detailHead, color: '#fbbf24' }}>💰 Revenue Opportunities</div>
+                            {(r.revenue_opportunities || []).map((p: string, i: number) => (
+                              <div key={i} style={S.detailItem}>💰 {p}</div>
                             ))}
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {isExpanded&&isLam&&(
+                    {isExpanded && isLam && (
                       <div style={S.detail}>
-                        <div style={{padding:'16px 20px'}}>
-                          <div style={{...S.detailHead,color:'#818cf8',marginBottom:'10px'}}>📋 Top Actions</div>
-                          {(item.executive_brief?.top_3_actions||[]).map((a:string,i:number)=>(
-                            <div key={i} style={{...S.detailItem,marginBottom:'6px'}}><span style={{color:'#818cf8',fontWeight:700}}>0{i+1}</span> {a}</div>
+                        <div style={{ padding: '16px 20px' }}>
+                          <div style={{ ...S.detailHead, color: '#818cf8', marginBottom: '10px' }}>📋 Top Actions</div>
+                          {(item.executive_brief?.top_3_actions || []).map((a: string, i: number) => (
+                            <div key={i} style={{ ...S.detailItem, marginBottom: '6px' }}>
+                              <span style={{ color: '#818cf8', fontWeight: 700 }}>0{i + 1}</span> {a}
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
 
                     <div style={S.cardActions}>
-                      <button style={S.ghostBtn} onClick={()=>toggleCard(item.id)}>
-                        {isExpanded?'▲ Hide details':'▼ View full analysis'}
+                      <button style={S.ghostBtn} onClick={() => toggleCard(item.id)}>
+                        {isExpanded ? '▲ Hide details' : '▼ View full analysis'}
                       </button>
-                      {isLam&&(
-                        <a href={`/reports/lam/${item.id}`} style={{...S.ghostBtn,textDecoration:'none',display:'inline-block'}}>
+                      {isLam && (
+                        <a href={`/reports/lam/${item.id}`} style={{ ...S.ghostBtn, textDecoration: 'none', display: 'inline-block' }}>
                           📄 Full LAM Report
                         </a>
                       )}
-                      <button style={S.ghostBtn} onClick={()=>triggerScan(item.url,isLam?'lam':'llm')}>↺ Re-scan</button>
+                      <button style={S.ghostBtn} onClick={() => triggerScan(item.url, isLam ? 'lam' : 'llm')}>↺ Re-scan</button>
                     </div>
                   </>
                 )}
 
-                {item.status==='error'&&(
-                  <div style={{padding:'12px 20px',color:'#f87171',fontSize:'12px',borderTop:'1px solid #0d1520'}}>
-                    ❌ {item.error_text||'Scan failed.'} &nbsp;
-                    <button style={S.ghostBtn} onClick={()=>triggerScan(item.url)}>Retry →</button>
+                {item.status === 'error' && (
+                  <div style={{ padding: '12px 20px', color: '#f87171', fontSize: '12px', borderTop: '1px solid #0d1520' }}>
+                    ❌ {item.error_text || 'Scan failed.'} &nbsp;
+                    <button style={S.ghostBtn} onClick={() => triggerScan(item.url)}>Retry →</button>
                   </div>
                 )}
-                {item.status==='cancelled'&&(
-                  <div style={{padding:'12px 20px',color:'#475569',fontSize:'12px',borderTop:'1px solid #0d1520'}}>
-                    Cancelled. <button style={S.ghostBtn} onClick={()=>triggerScan(item.url)}>Re-scan →</button>
+                {item.status === 'cancelled' && (
+                  <div style={{ padding: '12px 20px', color: '#475569', fontSize: '12px', borderTop: '1px solid #0d1520' }}>
+                    Cancelled. <button style={S.ghostBtn} onClick={() => triggerScan(item.url)}>Re-scan →</button>
                   </div>
                 )}
               </div>
@@ -445,67 +477,67 @@ export default function Dashboard() {
   )
 }
 
-const S: Record<string,React.CSSProperties> = {
-  page:{minHeight:'100vh',background:'#080c14',color:'#94a3b8'},
-  topbar:{background:'#0a0f1a',borderBottom:'1px solid #1e2a3a',padding:'0 24px',height:'56px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20},
-  topLogo:{fontSize:'16px',fontWeight:900,color:'white',letterSpacing:'-0.3px',whiteSpace:'nowrap'},
-  accent:{color:'#6366f1'},
-  topRight:{display:'flex',alignItems:'center',gap:'10px',flexShrink:0},
-  trialBadge:{fontSize:'11px',background:'#1e2d4a',border:'1px solid #3b4fd8',borderRadius:'20px',padding:'4px 12px',color:'#818cf8',whiteSpace:'nowrap'},
-  planBadge:{fontSize:'11px',background:'#052e16',border:'1px solid #166534',borderRadius:'20px',padding:'4px 12px',color:'#4ade80',whiteSpace:'nowrap'},
-  userPill:{display:'flex',alignItems:'center',gap:'8px',background:'#0f1420',border:'1px solid #1e2a3a',borderRadius:'20px',padding:'4px 12px 4px 4px'},
-  avatar:{width:'26px',height:'26px',borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:800,color:'white'},
-  userEmail:{fontSize:'11px',color:'#64748b',maxWidth:'140px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},
-  adminBtn:{fontSize:'11px',color:'#818cf8',border:'1px solid #3b4fd8',borderRadius:'8px',padding:'5px 10px',textDecoration:'none',whiteSpace:'nowrap'},
-  signOutBtn:{background:'transparent',color:'#f87171',border:'1px solid #991b1b',borderRadius:'8px',padding:'5px 10px',fontSize:'11px',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'},
-  main:{maxWidth:'1200px',margin:'0 auto',padding:'28px 24px'},
-  scanBar:{background:'#0f1420',border:'1px solid #1e2a3a',borderRadius:'16px',padding:'20px 24px',marginBottom:'24px'},
-  scanBarTop:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px',flexWrap:'wrap',gap:'12px'},
-  scanBarTitle:{fontSize:'14px',fontWeight:800,color:'white'},
-  tabs:{display:'flex',gap:'6px',flexWrap:'wrap'},
-  tab:{padding:'6px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:600,cursor:'pointer',border:'1px solid #1e2a3a',color:'#64748b',background:'transparent',fontFamily:'inherit'},
-  tabActive:{background:'#1e2d4a',color:'#818cf8',borderColor:'#3b4fd8'},
-  tabLocked:{opacity:0.5,cursor:'not-allowed'},
-  upgradeBox:{background:'#0d1020',border:'1px solid #3b4fd8',borderRadius:'12px',padding:'20px'},
-  upgradeBtn:{display:'inline-block',padding:'8px 18px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',borderRadius:'8px',fontSize:'12px',fontWeight:700,textDecoration:'none'},
-  inputRow:{display:'flex',gap:'10px',alignItems:'center'},
-  urlInput:{flex:1,background:'#080c14',border:'1px solid #1e2a3a',borderRadius:'10px',padding:'10px 14px',color:'white',fontSize:'13px',outline:'none',fontFamily:'inherit'},
-  scanBtn:{padding:'10px 20px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'},
-  ghostBtn:{padding:'6px 12px',background:'transparent',color:'#64748b',border:'1px solid #1e2a3a',borderRadius:'8px',fontSize:'11px',cursor:'pointer',fontFamily:'inherit'},
-  statusBar:{marginTop:'12px',padding:'10px 14px',borderRadius:'8px',fontSize:'12px'},
-  statusScanning:{background:'#1e2d4a',color:'#818cf8',border:'1px solid #3b4fd8'},
-  statusSuccess:{background:'#052e16',color:'#4ade80',border:'1px solid #166534'},
-  statusError:{background:'#1c0505',color:'#f87171',border:'1px solid #991b1b'},
-  statsRow:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px',marginBottom:'24px'},
-  statCard:{background:'#0f1420',border:'1px solid #1e2a3a',borderRadius:'14px',padding:'18px 20px'},
-  statVal:{fontSize:'28px',fontWeight:900,letterSpacing:'-0.5px'},
-  statLabel:{fontSize:'10px',color:'#475569',textTransform:'uppercase',letterSpacing:'0.06em',fontWeight:600,marginTop:'4px'},
-  statSub:{fontSize:'11px',color:'#334155',marginTop:'2px'},
-  filterRow:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'16px',flexWrap:'wrap'},
-  filterLabel:{fontSize:'10px',color:'#334155',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em'},
-  filterBtn:{padding:'5px 12px',borderRadius:'8px',fontSize:'11px',fontWeight:700,cursor:'pointer',border:'1px solid #1e2a3a',color:'#475569',background:'transparent',fontFamily:'inherit'},
-  filterBtnActive:{background:'#1e2d4a',color:'#818cf8',borderColor:'#3b4fd8'},
-  searchInput:{marginLeft:'auto',background:'#080c14',border:'1px solid #1e2a3a',borderRadius:'10px',padding:'5px 12px',color:'white',fontSize:'12px',outline:'none',width:'200px',fontFamily:'inherit'},
-  empty:{textAlign:'center',padding:'80px 20px',color:'#1e2a3a'},
-  card:{background:'#0f1420',border:'1px solid #1e2a3a',borderRadius:'16px',overflow:'hidden',marginBottom:'12px'},
-  cardHeader:{padding:'18px 20px',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px'},
-  cardName:{fontSize:'16px',fontWeight:800,color:'white',marginBottom:'3px'},
-  cardUrl:{fontSize:'11px',color:'#334155',textDecoration:'none'},
-  cardMeta:{fontSize:'10px',color:'#475569',marginTop:'4px'},
-  progressWrap:{marginTop:'10px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'},
-  progressTrack:{flex:1,minWidth:'120px',height:'4px',background:'#1e2a3a',borderRadius:'4px',overflow:'hidden'},
-  progressFill:{height:'4px',background:'linear-gradient(90deg,#6366f1,#8b5cf6)',borderRadius:'4px',transition:'width 0.5s ease'},
-  cancelBtn:{padding:'3px 10px',background:'transparent',color:'#f87171',border:'1px solid #991b1b',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'},
-  scoreRing:{width:'72px',height:'72px',borderRadius:'50%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'3px solid'},
-  bars:{padding:'12px 20px',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px',borderTop:'1px solid #0d1520'},
-  barItem:{fontSize:'11px'},
-  barLabel:{display:'flex',justifyContent:'space-between',marginBottom:'4px',color:'#475569',fontWeight:600},
-  barTrack:{height:'4px',background:'#1e2a3a',borderRadius:'4px',overflow:'hidden'},
-  barFill:{height:'4px',borderRadius:'4px',transition:'width 0.8s ease'},
-  summary:{padding:'12px 20px',fontSize:'13px',color:'#64748b',lineHeight:1.6,borderTop:'1px solid #0d1520'},
-  detail:{borderTop:'1px solid #0d1520',background:'#0a0f18'},
-  detailGrid:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px',padding:'16px 20px'},
-  detailHead:{fontSize:'10px',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'8px'},
-  detailItem:{fontSize:'11px',color:'#64748b',background:'#080c14',border:'1px solid #1e2a3a',borderRadius:'8px',padding:'8px 10px',marginBottom:'6px',lineHeight:1.5},
-  cardActions:{padding:'12px 20px',display:'flex',gap:'8px',alignItems:'center',background:'#0a0f1a',borderTop:'1px solid #0d1520',flexWrap:'wrap'},
+const S: Record<string, React.CSSProperties> = {
+  page: { minHeight: '100vh', background: '#080c14', color: '#94a3b8' },
+  topbar: { background: '#0a0f1a', borderBottom: '1px solid #1e2a3a', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 },
+  topLogo: { fontSize: '16px', fontWeight: 900, color: 'white', letterSpacing: '-0.3px', whiteSpace: 'nowrap' },
+  accent: { color: '#6366f1' },
+  topRight: { display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 },
+  trialBadge: { fontSize: '11px', background: '#1e2d4a', border: '1px solid #3b4fd8', borderRadius: '20px', padding: '4px 12px', color: '#818cf8', whiteSpace: 'nowrap' },
+  planBadge: { fontSize: '11px', background: '#052e16', border: '1px solid #166534', borderRadius: '20px', padding: '4px 12px', color: '#4ade80', whiteSpace: 'nowrap' },
+  userPill: { display: 'flex', alignItems: 'center', gap: '8px', background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '20px', padding: '4px 12px 4px 4px' },
+  avatar: { width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'white' },
+  userEmail: { fontSize: '11px', color: '#64748b', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  adminBtn: { fontSize: '11px', color: '#818cf8', border: '1px solid #3b4fd8', borderRadius: '8px', padding: '5px 10px', textDecoration: 'none', whiteSpace: 'nowrap' },
+  signOutBtn: { background: 'transparent', color: '#f87171', border: '1px solid #991b1b', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  main: { maxWidth: '1200px', margin: '0 auto', padding: '28px 24px' },
+  scanBar: { background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' },
+  scanBarTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
+  scanBarTitle: { fontSize: '14px', fontWeight: 800, color: 'white' },
+  tabs: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
+  tab: { padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: '1px solid #1e2a3a', color: '#64748b', background: 'transparent', fontFamily: 'inherit' },
+  tabActive: { background: '#1e2d4a', color: '#818cf8', borderColor: '#3b4fd8' },
+  tabLocked: { opacity: 0.5, cursor: 'not-allowed' },
+  upgradeBox: { background: '#0d1020', border: '1px solid #3b4fd8', borderRadius: '12px', padding: '20px' },
+  upgradeBtn: { display: 'inline-block', padding: '8px 18px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '8px', fontSize: '12px', fontWeight: 700, textDecoration: 'none' },
+  inputRow: { display: 'flex', gap: '10px', alignItems: 'center' },
+  urlInput: { flex: 1, background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '10px', padding: '10px 14px', color: 'white', fontSize: '13px', outline: 'none', fontFamily: 'inherit' },
+  scanBtn: { padding: '10px 20px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  ghostBtn: { padding: '6px 12px', background: 'transparent', color: '#64748b', border: '1px solid #1e2a3a', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit' },
+  statusBar: { marginTop: '12px', padding: '10px 14px', borderRadius: '8px', fontSize: '12px' },
+  statusScanning: { background: '#1e2d4a', color: '#818cf8', border: '1px solid #3b4fd8' },
+  statusSuccess: { background: '#052e16', color: '#4ade80', border: '1px solid #166534' },
+  statusError: { background: '#1c0505', color: '#f87171', border: '1px solid #991b1b' },
+  statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '24px' },
+  statCard: { background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '14px', padding: '18px 20px' },
+  statVal: { fontSize: '28px', fontWeight: 900, letterSpacing: '-0.5px' },
+  statLabel: { fontSize: '10px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginTop: '4px' },
+  statSub: { fontSize: '11px', color: '#334155', marginTop: '2px' },
+  filterRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' },
+  filterLabel: { fontSize: '10px', color: '#334155', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' },
+  filterBtn: { padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', border: '1px solid #1e2a3a', color: '#475569', background: 'transparent', fontFamily: 'inherit' },
+  filterBtnActive: { background: '#1e2d4a', color: '#818cf8', borderColor: '#3b4fd8' },
+  searchInput: { marginLeft: 'auto', background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '10px', padding: '5px 12px', color: 'white', fontSize: '12px', outline: 'none', width: '200px', fontFamily: 'inherit' },
+  empty: { textAlign: 'center', padding: '80px 20px', color: '#1e2a3a' },
+  card: { background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px' },
+  cardHeader: { padding: '18px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' },
+  cardName: { fontSize: '16px', fontWeight: 800, color: 'white', marginBottom: '3px' },
+  cardUrl: { fontSize: '11px', color: '#334155', textDecoration: 'none' },
+  cardMeta: { fontSize: '10px', color: '#475569', marginTop: '4px' },
+  progressWrap: { marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
+  progressTrack: { flex: 1, minWidth: '120px', height: '4px', background: '#1e2a3a', borderRadius: '4px', overflow: 'hidden' },
+  progressFill: { height: '4px', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '4px', transition: 'width 0.5s ease' },
+  cancelBtn: { padding: '3px 10px', background: 'transparent', color: '#f87171', border: '1px solid #991b1b', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  scoreRing: { width: '72px', height: '72px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '3px solid' },
+  bars: { padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', borderTop: '1px solid #0d1520' },
+  barItem: { fontSize: '11px' },
+  barLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#475569', fontWeight: 600 },
+  barTrack: { height: '4px', background: '#1e2a3a', borderRadius: '4px', overflow: 'hidden' },
+  barFill: { height: '4px', borderRadius: '4px', transition: 'width 0.8s ease' },
+  summary: { padding: '12px 20px', fontSize: '13px', color: '#64748b', lineHeight: 1.6, borderTop: '1px solid #0d1520' },
+  detail: { borderTop: '1px solid #0d1520', background: '#0a0f18' },
+  detailGrid: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', padding: '16px 20px' },
+  detailHead: { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' },
+  detailItem: { fontSize: '11px', color: '#64748b', background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '8px', padding: '8px 10px', marginBottom: '6px', lineHeight: 1.5 },
+  cardActions: { padding: '12px 20px', display: 'flex', gap: '8px', alignItems: 'center', background: '#0a0f1a', borderTop: '1px solid #0d1520', flexWrap: 'wrap' },
 }
