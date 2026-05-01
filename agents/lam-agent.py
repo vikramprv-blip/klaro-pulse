@@ -243,7 +243,7 @@ Return as JSON object."""
         experience_data = extract_json(result1)
         pages_visited = experience_data.get("pages_visited", [])
         print(f"  Pages visited: {len(pages_visited)}")
-        await asyncio.sleep(3)
+        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
 
         print("\n[Task 2/6] Attempting to contact/convert...")
         task2 = f"""Visit {target_url} and try to become a customer. Find and attempt: contact form, phone number, email, booking system, main CTA.
@@ -251,7 +251,7 @@ Return JSON with: contact_form, phone_number, email_address, booking_system, mai
         result2 = await run_browser_task(task2, llm, 25)
         conversion_data = extract_json(result2)
         print("  Conversion data collected")
-        await asyncio.sleep(3)
+        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
 
         print("\n[Task 3/6] Testing signin/signup flow...")
         task3 = f"""Visit {target_url} and test account creation and login. Find signup and signin pages. Note all fields, steps, errors, social login options.
@@ -259,7 +259,7 @@ DO NOT complete signup. Return JSON with: signup object, signin object, auth_ove
         result3 = await run_browser_task(task3, llm, 20)
         signup_data = extract_json(result3)
         print("  Auth flow tested")
-        await asyncio.sleep(3)
+        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
 
         print("\n[Task 4/6] ADA/WCAG accessibility audit...")
         task4 = f"""Visit {target_url} and conduct ADA/WCAG 2.1 AA audit. Check: alt text, form labels, color contrast, keyboard navigation, heading structure, focus indicators, skip navigation, ARIA labels, font sizes, touch targets.
@@ -267,7 +267,7 @@ Return JSON with: ada_score, wcag_level, critical_violations array, specific cou
         result4 = await run_browser_task(task4, llm, 25)
         ada_data = extract_json(result4)
         print(f"  ADA score: {ada_data.get('ada_score', 'N/A')}")
-        await asyncio.sleep(3)
+        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
 
         print("\n[Task 5/6] SOC/Security public page audit...")
         task5 = f"""Visit {target_url} and audit public security and compliance signals. Check: HTTPS, cookie consent, privacy policy, terms of service, third party trackers, GDPR/CCPA/India DPDP signals, SOC2 claims, security page, status page.
@@ -275,7 +275,7 @@ Return JSON with: soc_score, https_enforced, cookie_consent, privacy_policy, gdp
         result5 = await run_browser_task(task5, llm, 20)
         soc_data = extract_json(result5)
         print(f"  SOC score: {soc_data.get('soc_score', 'N/A')}")
-        await asyncio.sleep(3)
+        await asyncio.sleep(15)  # Wait for Gemini rate limit reset
 
     else:
         experience_data = {"error": "browser_unavailable"}
