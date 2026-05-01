@@ -33,6 +33,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install browser-use==0.12.6
+          pip install langchain-google-genai langchain-groq langchain-openai
           pip install playwright python-dotenv supabase google-generativeai
           pip show browser-use | grep Version
       - name: Run scan
