@@ -110,6 +110,18 @@ def call_llm(prompt):
             {"model": "Meta-Llama-3.3-70B-Instruct", "messages": [{"role": "user", "content": prompt}], "temperature": 0.2, "max_tokens": 6000},
             {"Authorization": f"Bearer {SAMBANOVA_KEY}"}
         )["choices"][0]["message"]["content"]))))
+    if MISTRAL_KEY:
+        providers.append(("Mistral", lambda: json.loads(call_provider(
+            "https://api.mistral.ai/v1/chat/completions",
+            {"model": "mistral-large-latest", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
+            {"Authorization": f"Bearer {MISTRAL_KEY}"}
+        )["choices"][0]["message"]["content"])))
+    if GH_MODELS_KEY:
+        providers.append(("GitHubModels", lambda: json.loads(call_provider(
+            "https://models.inference.ai.azure.com/chat/completions",
+            {"model": "gpt-4.1-mini", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
+            {"Authorization": f"Bearer {GH_MODELS_KEY}"}
+        )["choices"][0]["message"]["content"])))
     if OPENAI_KEY:
         providers.append(("OpenAI", lambda: json.loads(call_provider(
             "https://api.openai.com/v1/chat/completions",
