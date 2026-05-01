@@ -1,12 +1,13 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/api/razorpay/order/route": "app/api/razorpay/order/route.js",
+  "/api/pulse/cancel/route": "app/api/pulse/cancel/route.js",
   "/api/quota/check/route": "app/api/quota/check/route.js",
+  "/api/razorpay/order/route": "app/api/razorpay/order/route.js",
   "/admin/page": "app/admin/page.js",
-  "/api/reports/run/route": "app/api/reports/run/route.js",
-  "/api/razorpay/webhook/route": "app/api/razorpay/webhook/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/signup/page": "app/signup/page.js",
   "/signin/page": "app/signin/page.js",
-  "/reports/lam/[id]/page": "app/reports/lam/[id]/page.js"
+  "/api/reports/run/route": "app/api/reports/run/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/api/razorpay/webhook/route": "app/api/razorpay/webhook/route.js",
+  "/reports/lam/[id]/page": "app/reports/lam/[id]/page.js",
+  "/signup/page": "app/signup/page.js"
 }
