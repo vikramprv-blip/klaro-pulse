@@ -111,16 +111,18 @@ def call_llm(prompt):
             {"Authorization": f"Bearer {SAMBANOVA_KEY}"}
         )["choices"][0]["message"]["content"]))))
     if MISTRAL_KEY:
-        providers.append(("Mistral", lambda: json.loads(call_provider(
+        mk = MISTRAL_KEY
+        providers.append(("Mistral", lambda mk=mk: json.loads(call_provider(
             "https://api.mistral.ai/v1/chat/completions",
             {"model": "mistral-large-latest", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {MISTRAL_KEY}"}
+            {"Authorization": f"Bearer {mk}"}
         )["choices"][0]["message"]["content"])))
     if GH_MODELS_KEY:
-        providers.append(("GitHubModels", lambda: json.loads(call_provider(
+        gk = GH_MODELS_KEY
+        providers.append(("GitHubModels", lambda gk=gk: json.loads(call_provider(
             "https://models.inference.ai.azure.com/chat/completions",
             {"model": "gpt-4.1-mini", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 6000},
-            {"Authorization": f"Bearer {GH_MODELS_KEY}"}
+            {"Authorization": f"Bearer {gk}"}
         )["choices"][0]["message"]["content"])))
     if OPENAI_KEY:
         providers.append(("OpenAI", lambda: json.loads(call_provider(
@@ -147,8 +149,8 @@ def get_lam_llm():
         if GROQ_KEY:
             import os
             os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="llama-3.3-70b-specdec")
-            print("  Using Browser Use ChatGroq (llama-3.3-70b-specdec)")
+            llm = ChatGroq(model="llama-3.3-70b-versatile")
+            print("  Using Browser Use ChatGroq (llama-3.3-70b-versatile)")
             return llm
     except Exception as e:
         print(f"  ChatGroq failed: {e}")
