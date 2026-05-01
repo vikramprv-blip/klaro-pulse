@@ -158,7 +158,7 @@ def get_lam_llm():
         if GROQ_KEY:
             import os
             os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="openai/gpt-oss-20b")
+            llm = ChatGroq(model="llama-3.3-70b-versatile")
             print("  Using Browser Use ChatGroq (llama-4-maverick)")
             return llm
     except Exception as e:
