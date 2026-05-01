@@ -158,8 +158,8 @@ def get_lam_llm():
         if GROQ_KEY:
             import os
             os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="llama-3.3-70b-versatile")
-            print("  Using Browser Use ChatGroq (llama-4-maverick)")
+            llm = ChatGroq(model="llama-3.1-8b-instant")
+            print("  Using Browser Use ChatGroq (llama-3.1-8b-instant)")
             return llm
     except Exception as e:
         print(f"  ChatGroq failed: {e}")
