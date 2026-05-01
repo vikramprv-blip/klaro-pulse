@@ -1,18 +1,15 @@
 import { createClient } from '@/lib/supabase/client'
 
+const ADMIN_EMAILS = ['vikramprv@gmail.com']
+
 export async function getUserProfile() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return null
 
-  // Check if admin first
-  const { data: adminRow } = await sb
-    .from('pulse_admins')
-    .select('email')
-    .eq('email', user.email)
-    .single()
+  const isAdmin = ADMIN_EMAILS.includes(user.email || '')
 
-  if (adminRow) {
+  if (isAdmin) {
     return {
       id: user.id,
       email: user.email,
@@ -23,12 +20,17 @@ export async function getUserProfile() {
     }
   }
 
-  // Regular user — get from pulse_users
   const { data: profile } = await sb
     .from('pulse_users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  return profile || { id: user.id, email: user.email, plan: 'trial', scans_used_this_month: 0, is_admin: false }
+  return profile || {
+    id: user.id,
+    email: user.email,
+    plan: 'trial',
+    scans_used_this_month: 0,
+    is_admin: false,
+  }
 }
