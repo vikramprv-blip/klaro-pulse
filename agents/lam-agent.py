@@ -129,7 +129,18 @@ def call_llm(prompt):
 
 def get_lam_llm():
     # Browser Use 0.12.6 uses its own native LLM classes
-    # Import directly from browser_use, not langchain
+    # Groq first - new key, specdec supports structured outputs
+    try:
+        from browser_use import ChatGroq
+        if GROQ_KEY:
+            import os
+            os.environ["GROQ_API_KEY"] = GROQ_KEY
+            llm = ChatGroq(model="llama-3.3-70b-specdec")
+            print("  Using Browser Use ChatGroq (llama-3.3-70b-specdec)")
+            return llm
+    except Exception as e:
+        print(f"  ChatGroq failed: {e}")
+    # Gemini second
     try:
         from browser_use import ChatGoogle
         if GEMINI_KEY:
@@ -140,16 +151,7 @@ def get_lam_llm():
             return llm
     except Exception as e:
         print(f"  ChatGoogle failed: {e}")
-    try:
-        from browser_use import ChatGroq
-        if GROQ_KEY:
-            import os
-            os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct")
-            print("  Using Browser Use ChatGroq (Llama 4 Maverick)")
-            return llm
-    except Exception as e:
-        print(f"  ChatGroq failed: {e}")
+    # OpenAI last
     try:
         from browser_use import ChatOpenAI
         if OPENAI_KEY:
