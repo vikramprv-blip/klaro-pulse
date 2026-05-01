@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getUserProfile } from '@/lib/auth'
 
 const PLAN_LIMITS: Record<string, any> = {
   trial:      { scans: 1,   compare: 1,  bulk: false, lam: false,  label: 'Trial' },
@@ -42,14 +43,11 @@ export default function Dashboard() {
   const sb = createClient()
 
   useEffect(() => {
-    sb.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { window.location.href = '/signin'; return }
-      setUser(user)
-      sb.from('pulse_users').select('*').eq('id', user.id).single()
-        .then(({ data }) => {
-          setProfile(data || { plan: 'trial', scans_used_this_month: 0 })
-          setProfileLoaded(true)
-        })
+    getUserProfile().then(p => {
+      if (!p) { window.location.href = '/signin'; return }
+      setUser({ id: p.id, email: p.email })
+      setProfile(p)
+      setProfileLoaded(true)
     })
   }, [])
 
@@ -78,8 +76,11 @@ export default function Dashboard() {
 
   const plan = profile?.plan || 'trial'
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.trial
+  const isAdmin = profile?.is_admin || false
+
   const isLocked = (feature: string) => {
     if (!profileLoaded) return false
+    if (isAdmin) return false
     if (feature === 'bulk') return !limits.bulk
     if (feature === 'lam') return !limits.lam
     if (feature === 'compare') return limits.compare === 0
@@ -90,30 +91,24 @@ export default function Dashboard() {
     setScanning(true)
     setScanStatus({ msg: `Queuing scan for ${url}...`, type: 'scanning' })
     try {
-      // Step 1 — create pending scan row
-      const { data: scanRow } = await sb.from('pulse_scans').insert({
+      const { data: scanRow, error: insertError } = await sb.from('pulse_scans').insert({
         user_id: user.id, url, scan_type: scanType,
         status: 'pending', progress: 0, progress_message: 'Queued...'
       }).select().single()
 
-      if (!scanRow) throw new Error('Could not create scan record')
+      if (insertError || !scanRow) throw new Error(insertError?.message || 'Could not create scan record')
 
       if (scanType === 'lam') {
-        // LAM → GitHub Actions
         const res = await fetch('/api/pulse/trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ target_url: url, scan_mode: 'lam', scan_id: scanRow.id })
         })
         const data = await res.json()
-        if (data.ok) {
-          setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
-        } else {
-          throw new Error(data.error || 'LAM trigger failed')
-        }
+        if (data.ok) setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
+        else throw new Error(data.error || 'LAM trigger failed')
       } else {
-        // LLM → Vercel serverless (fast, no GitHub needed)
-        setScanStatus({ msg: `⏳ Scanning ${url} — this takes 30-60 seconds...`, type: 'scanning' })
+        setScanStatus({ msg: `⏳ Scanning ${url} — takes 30-60 seconds...`, type: 'scanning' })
         const res = await fetch('/api/pulse/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -122,13 +117,7 @@ export default function Dashboard() {
         const data = await res.json()
         if (data.ok) {
           setScanStatus({ msg: `✅ Scan complete — score: ${data.score}/100`, type: 'success' })
-          await sb.from('pulse_users').update({
-            scans_used_this_month: (profile?.scans_used_this_month || 0) + 1
-          }).eq('id', user.id)
-          setProfile((p: any) => ({ ...p, scans_used_this_month: (p?.scans_used_this_month || 0) + 1 }))
-        } else {
-          throw new Error(data.error || 'Scan failed')
-        }
+        } else throw new Error(data.error || 'Scan failed')
       }
     } catch (e: any) {
       setScanStatus({ msg: `❌ ${e.message}`, type: 'error' })
@@ -199,15 +188,16 @@ export default function Dashboard() {
       <div style={S.topbar}>
         <div style={S.topLogo}>KLARO <span style={S.accent}>PULSE</span></div>
         <div style={S.topRight}>
-          {plan === 'trial' && trialDaysLeft !== null && trialDaysLeft < 9999 && (
+          {isAdmin && <div style={S.planBadge}>Enterprise · Admin</div>}
+          {!isAdmin && plan === 'trial' && trialDaysLeft !== null && trialDaysLeft < 9999 && (
             <div style={S.trialBadge}>{trialDaysLeft}d trial · <a href="/settings" style={{ color: '#818cf8' }}>Upgrade</a></div>
           )}
-          {plan !== 'trial' && <div style={S.planBadge}>{limits.label}</div>}
+          {!isAdmin && plan !== 'trial' && <div style={S.planBadge}>{limits.label}</div>}
           <div style={S.userPill}>
             <div style={S.avatar}>{user?.email?.charAt(0).toUpperCase()}</div>
             <span style={S.userEmail}>{user?.email}</span>
           </div>
-          <a href="/admin" style={S.adminBtn}>Admin</a>
+          {isAdmin && <a href="/admin" style={S.adminBtn}>⚙ Admin</a>}
           <button style={S.signOutBtn} onClick={async () => { await sb.auth.signOut(); window.location.href = '/signin' }}>Sign out</button>
         </div>
       </div>
@@ -278,7 +268,7 @@ export default function Dashboard() {
               {mode === 'lam' && (
                 <div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                    🤖 AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
+                    �� AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
                   </div>
                   <div style={S.inputRow}>
                     <input style={S.urlInput} type="url" placeholder="https://yoursite.com" value={lamUrl}
@@ -333,7 +323,6 @@ export default function Dashboard() {
               <div style={{ fontSize: '13px' }}>{allItems.length === 0 ? 'Enter a URL above and click Scan Now' : 'Try a different filter'}</div>
             </div>
           )}
-
           {filtered.map(item => {
             const isLam = item._type === 'lam'
             const score = item.overall_score || 0
@@ -341,7 +330,6 @@ export default function Dashboard() {
             const isExpanded = expandedCards.has(item.id)
             const r = item.report || {}
             const name = (() => { try { return new URL(item.url).hostname } catch { return item.url } })()
-
             return (
               <div key={item.id} style={S.card}>
                 <div style={S.cardHeader}>
@@ -374,7 +362,6 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-
                 {!isPending && item.status === 'complete' && (
                   <>
                     {!isLam && (
@@ -397,66 +384,45 @@ export default function Dashboard() {
                         ))}
                       </div>
                     )}
-
                     {(r.one_line_verdict || r.novice_summary || item.executive_brief?.one_line_verdict) && (
-                      <div style={S.summary}>
-                        {r.one_line_verdict || r.novice_summary || item.executive_brief?.one_line_verdict}
-                      </div>
+                      <div style={S.summary}>{r.one_line_verdict || r.novice_summary || item.executive_brief?.one_line_verdict}</div>
                     )}
-
                     {isExpanded && !isLam && (
                       <div style={S.detail}>
                         <div style={S.detailGrid}>
                           <div>
                             <div style={{ ...S.detailHead, color: '#f87171' }}>🔴 Problems Found</div>
-                            {(r.ux_friction_points || []).map((p: string, i: number) => (
-                              <div key={i} style={S.detailItem}>⚠ {p}</div>
-                            ))}
+                            {(r.ux_friction_points || []).map((p: string, i: number) => <div key={i} style={S.detailItem}>⚠ {p}</div>)}
                             {!(r.ux_friction_points || []).length && <div style={{ ...S.detailItem, color: '#334155' }}>None detected</div>}
                           </div>
                           <div>
                             <div style={{ ...S.detailHead, color: '#4ade80' }}>🟢 How to Fix</div>
-                            {(r.resolution_steps || []).map((p: string, i: number) => (
-                              <div key={i} style={S.detailItem}><span style={{ color: '#4ade80', fontWeight: 700 }}>0{i + 1}</span> {p}</div>
-                            ))}
+                            {(r.resolution_steps || []).map((p: string, i: number) => <div key={i} style={S.detailItem}><span style={{ color: '#4ade80', fontWeight: 700 }}>0{i + 1}</span> {p}</div>)}
                           </div>
                           <div>
                             <div style={{ ...S.detailHead, color: '#fbbf24' }}>💰 Revenue Opportunities</div>
-                            {(r.revenue_opportunities || []).map((p: string, i: number) => (
-                              <div key={i} style={S.detailItem}>💰 {p}</div>
-                            ))}
+                            {(r.revenue_opportunities || []).map((p: string, i: number) => <div key={i} style={S.detailItem}>💰 {p}</div>)}
                           </div>
                         </div>
                       </div>
                     )}
-
                     {isExpanded && isLam && (
                       <div style={S.detail}>
                         <div style={{ padding: '16px 20px' }}>
                           <div style={{ ...S.detailHead, color: '#818cf8', marginBottom: '10px' }}>📋 Top Actions</div>
                           {(item.executive_brief?.top_3_actions || []).map((a: string, i: number) => (
-                            <div key={i} style={{ ...S.detailItem, marginBottom: '6px' }}>
-                              <span style={{ color: '#818cf8', fontWeight: 700 }}>0{i + 1}</span> {a}
-                            </div>
+                            <div key={i} style={{ ...S.detailItem, marginBottom: '6px' }}><span style={{ color: '#818cf8', fontWeight: 700 }}>0{i + 1}</span> {a}</div>
                           ))}
                         </div>
                       </div>
                     )}
-
                     <div style={S.cardActions}>
-                      <button style={S.ghostBtn} onClick={() => toggleCard(item.id)}>
-                        {isExpanded ? '▲ Hide details' : '▼ View full analysis'}
-                      </button>
-                      {isLam && (
-                        <a href={`/reports/lam/${item.id}`} style={{ ...S.ghostBtn, textDecoration: 'none', display: 'inline-block' }}>
-                          📄 Full LAM Report
-                        </a>
-                      )}
+                      <button style={S.ghostBtn} onClick={() => toggleCard(item.id)}>{isExpanded ? '▲ Hide details' : '▼ View full analysis'}</button>
+                      {isLam && <a href={`/reports/lam/${item.id}`} style={{ ...S.ghostBtn, textDecoration: 'none', display: 'inline-block' }}>📄 Full LAM Report</a>}
                       <button style={S.ghostBtn} onClick={() => triggerScan(item.url, isLam ? 'lam' : 'llm')}>↺ Re-scan</button>
                     </div>
                   </>
                 )}
-
                 {item.status === 'error' && (
                   <div style={{ padding: '12px 20px', color: '#f87171', fontSize: '12px', borderTop: '1px solid #0d1520' }}>
                     ❌ {item.error_text || 'Scan failed.'} &nbsp;
