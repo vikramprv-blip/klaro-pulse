@@ -138,23 +138,50 @@ def get_lam_llm():
     try:
         from langchain_openai import ChatOpenAI
         if OPENAI_KEY:
-            return ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_KEY, temperature=0.1)
+            llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
+            print(f"  Using OpenAI gpt-4o-mini")
+            return llm
     except Exception as e:
         print(f"  OpenAI LLM init failed: {e}")
     try:
         from langchain_groq import ChatGroq
         if GROQ_KEY:
-            return ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=GROQ_KEY, temperature=0.1)
+            llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_KEY, temperature=0.1)
+            print(f"  Using Groq llama-3.3-70b")
+            return llm
     except Exception as e:
         print(f"  Groq LLM init failed: {e}")
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        if GEMINI_KEY:
+            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GEMINI_KEY, temperature=0.1)
+            print(f"  Using Gemini 2.0 Flash")
+            return llm
+    except Exception as e:
+        print(f"  Gemini LLM init failed: {e}")
     raise Exception("No LLM available for Browser Use")
 
 async def run_browser_task(task: str, llm, max_steps: int = 25) -> str:
     try:
-        from browser_use import Agent
-        agent = Agent(task=task, llm=llm, max_steps=max_steps)
+        from browser_use import Agent, BrowserConfig, Browser
+        browser = Browser(config=BrowserConfig(headless=True))
+        agent = Agent(task=task, llm=llm, max_steps=max_steps, browser=browser)
         result = await agent.run()
+        await browser.close()
         return str(result)
+    except TypeError as e:
+        if "provider" in str(e) or "attribute" in str(e):
+            # Browser Use version mismatch - try alternate init
+            try:
+                from browser_use import Agent
+                agent = Agent(task=task, llm=llm)
+                result = await agent.run()
+                return str(result)
+            except Exception as e2:
+                print(f"  Browser task failed (alt): {e2}")
+                return f"error: {e2}"
+        print(f"  Browser task failed: {e}")
+        return f"error: {e}"
     except Exception as e:
         print(f"  Browser task failed: {e}")
         return f"error: {e}"
