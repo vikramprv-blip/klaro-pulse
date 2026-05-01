@@ -18,6 +18,9 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
 GROQ_KEY = os.getenv("GROQ_API_KEY", "")
 CEREBRAS_KEY = os.getenv("CEREBRAS_API_KEY", "")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
+DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+SAMBANOVA_KEY = os.getenv("SAMBANOVA_API_KEY", "")
 
 import urllib.request
 
@@ -52,15 +55,22 @@ def supabase_update(run_id: str, data: dict):
         return False
 
 def call_llm(prompt: str) -> dict:
+    import time
     providers = []
-    if OPENAI_KEY:
-        providers.append(('OpenAI', lambda: _call_openai(prompt)))
     if GROQ_KEY:
         providers.append(('Groq', lambda: _call_groq(prompt)))
-    if CEREBRAS_KEY:
-        providers.append(('Cerebras', lambda: _call_cerebras(prompt)))
+    if DEEPSEEK_KEY:
+        providers.append(('DeepSeek', lambda: _call_deepseek(prompt)))
+    if OPENROUTER_KEY:
+        providers.append(('OpenRouter', lambda: _call_openrouter(prompt)))
     if GEMINI_KEY:
         providers.append(('Gemini', lambda: _call_gemini(prompt)))
+    if CEREBRAS_KEY:
+        providers.append(('Cerebras', lambda: _call_cerebras(prompt)))
+    if SAMBANOVA_KEY:
+        providers.append(('SambaNova', lambda: _call_sambanova(prompt)))
+    if OPENAI_KEY:
+        providers.append(('OpenAI', lambda: _call_openai(prompt)))
     for name, fn in providers:
         try:
             result = fn()
@@ -69,7 +79,63 @@ def call_llm(prompt: str) -> dict:
                 return result
         except Exception as e:
             print(f"  {name} failed: {e}")
+            time.sleep(2)
     raise Exception("All LLM providers failed")
+
+def _call_deepseek(prompt):
+    import time
+    url = "https://api.deepseek.com/chat/completions"
+    payload = json.dumps({
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.2, "max_tokens": 6000
+    }).encode()
+    req = urllib.request.Request(url, data=payload, method='POST')
+    req.add_header('Authorization', f'Bearer {DEEPSEEK_KEY}')
+    req.add_header('Content-Type', 'application/json')
+    response = urllib.request.urlopen(req, timeout=90)
+    data = json.loads(response.read())
+    return json.loads(data['choices'][0]['message']['content'])
+
+def _call_openrouter(prompt):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    payload = json.dumps({
+        "model": "meta-llama/llama-3.3-70b-instruct",
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.2, "max_tokens": 6000
+    }).encode()
+    req = urllib.request.Request(url, data=payload, method='POST')
+    req.add_header('Authorization', f'Bearer {OPENROUTER_KEY}')
+    req.add_header('Content-Type', 'application/json')
+    response = urllib.request.urlopen(req, timeout=90)
+    data = json.loads(response.read())
+    text = data['choices'][0]['message']['content']
+    clean = re.sub(r'```json
+?', '', text)
+    clean = re.sub(r'```
+?', '', clean).strip()
+    return json.loads(clean)
+
+def _call_sambanova(prompt):
+    url = "https://api.sambanova.ai/v1/chat/completions"
+    payload = json.dumps({
+        "model": "Meta-Llama-3.3-70B-Instruct",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2, "max_tokens": 6000
+    }).encode()
+    req = urllib.request.Request(url, data=payload, method='POST')
+    req.add_header('Authorization', f'Bearer {SAMBANOVA_KEY}')
+    req.add_header('Content-Type', 'application/json')
+    response = urllib.request.urlopen(req, timeout=90)
+    data = json.loads(response.read())
+    text = data['choices'][0]['message']['content']
+    clean = re.sub(r'```json
+?', '', text)
+    clean = re.sub(r'```
+?', '', clean).strip()
+    return json.loads(clean)
 
 def _call_openai(prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -135,14 +201,7 @@ def _call_gemini(prompt):
     return json.loads(clean)
 
 def get_lam_llm():
-    try:
-        from langchain_openai import ChatOpenAI
-        if OPENAI_KEY:
-            llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
-            print(f"  Using OpenAI gpt-4o-mini")
-            return llm
-    except Exception as e:
-        print(f"  OpenAI LLM init failed: {e}")
+    # Try Groq first - fastest and most reliable
     try:
         from langchain_groq import ChatGroq
         if GROQ_KEY:
@@ -151,37 +210,32 @@ def get_lam_llm():
             return llm
     except Exception as e:
         print(f"  Groq LLM init failed: {e}")
+    # Try Gemini second
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
         if GEMINI_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GEMINI_KEY, temperature=0.1)
+            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", google_api_key=GEMINI_KEY, temperature=0.1)
             print(f"  Using Gemini 2.0 Flash")
             return llm
     except Exception as e:
         print(f"  Gemini LLM init failed: {e}")
+    # Try OpenAI last - rate limited
+    try:
+        from langchain_openai import ChatOpenAI
+        if OPENAI_KEY:
+            llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
+            print(f"  Using OpenAI gpt-4o-mini")
+            return llm
+    except Exception as e:
+        print(f"  OpenAI LLM init failed: {e}")
     raise Exception("No LLM available for Browser Use")
 
 async def run_browser_task(task: str, llm, max_steps: int = 25) -> str:
     try:
-        from browser_use import Agent, BrowserConfig, Browser
-        browser = Browser(config=BrowserConfig(headless=True))
-        agent = Agent(task=task, llm=llm, max_steps=max_steps, browser=browser)
+        from browser_use import Agent
+        agent = Agent(task=task, llm=llm, max_steps=max_steps)
         result = await agent.run()
-        await browser.close()
         return str(result)
-    except TypeError as e:
-        if "provider" in str(e) or "attribute" in str(e):
-            # Browser Use version mismatch - try alternate init
-            try:
-                from browser_use import Agent
-                agent = Agent(task=task, llm=llm)
-                result = await agent.run()
-                return str(result)
-            except Exception as e2:
-                print(f"  Browser task failed (alt): {e2}")
-                return f"error: {e2}"
-        print(f"  Browser task failed: {e}")
-        return f"error: {e}"
     except Exception as e:
         print(f"  Browser task failed: {e}")
         return f"error: {e}"
