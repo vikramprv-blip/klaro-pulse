@@ -128,42 +128,38 @@ def call_llm(prompt):
     raise Exception("All LLM providers failed")
 
 def get_lam_llm():
-    # Browser Use 0.12.6 needs models that support json_schema structured outputs
-    # Gemini works best with browser-use
+    # Browser Use 0.12.6 uses its own native LLM classes
+    # Import directly from browser_use, not langchain
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        from browser_use import ChatGoogle
         if GEMINI_KEY:
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash",
-                google_api_key=GEMINI_KEY,
-                temperature=0.1
-            )
-            print("  Using Gemini 2.0 Flash for Browser Use")
+            import os
+            os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
+            llm = ChatGoogle(model="gemini-2.0-flash")
+            print("  Using Browser Use ChatGoogle (Gemini 2.0 Flash)")
             return llm
     except Exception as e:
-        print(f"  Gemini failed: {e}")
-    # Groq with a model that supports structured outputs
+        print(f"  ChatGoogle failed: {e}")
     try:
-        from langchain_groq import ChatGroq
+        from browser_use import ChatGroq
         if GROQ_KEY:
-            llm = ChatGroq(
-                model="llama-3.3-70b-specdec",
-                api_key=GROQ_KEY,
-                temperature=0.1
-            )
-            print("  Using Groq llama-3.3-70b-specdec for Browser Use")
+            import os
+            os.environ["GROQ_API_KEY"] = GROQ_KEY
+            llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct")
+            print("  Using Browser Use ChatGroq (Llama 4 Maverick)")
             return llm
     except Exception as e:
-        print(f"  Groq specdec failed: {e}")
-    # OpenAI as final fallback
+        print(f"  ChatGroq failed: {e}")
     try:
-        from langchain_openai import ChatOpenAI
+        from browser_use import ChatOpenAI
         if OPENAI_KEY:
-            llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
-            print("  Using OpenAI gpt-4o-mini for Browser Use")
+            import os
+            os.environ["OPENAI_API_KEY"] = OPENAI_KEY
+            llm = ChatOpenAI(model="gpt-4o-mini")
+            print("  Using Browser Use ChatOpenAI (gpt-4o-mini)")
             return llm
     except Exception as e:
-        print(f"  OpenAI failed: {e}")
+        print(f"  ChatOpenAI failed: {e}")
     raise Exception("No LLM available for Browser Use")
 
 def extract_json(text):
