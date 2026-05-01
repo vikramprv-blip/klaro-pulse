@@ -128,30 +128,44 @@ def call_llm(prompt):
     raise Exception("All LLM providers failed")
 
 def get_lam_llm():
+    # Browser Use 0.12.6 uses its own LLM classes, not LangChain
+    try:
+        from browser_use.llm import ChatGroq as BUChatGroq
+        if GROQ_KEY:
+            llm = BUChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_KEY, temperature=0.1)
+            print("  Using Browser Use native Groq")
+            return llm
+    except Exception as e:
+        print(f"  BU Groq failed: {e}")
+    try:
+        from browser_use.llm import ChatGoogleGenerativeAI as BUChatGemini
+        if GEMINI_KEY:
+            llm = BUChatGemini(model="gemini-2.0-flash-exp", api_key=GEMINI_KEY, temperature=0.1)
+            print("  Using Browser Use native Gemini")
+            return llm
+    except Exception as e:
+        print(f"  BU Gemini failed: {e}")
+    try:
+        from browser_use.llm import ChatOpenAI as BUChatOpenAI
+        if OPENAI_KEY:
+            llm = BUChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
+            print("  Using Browser Use native OpenAI")
+            return llm
+    except Exception as e:
+        print(f"  BU OpenAI failed: {e}")
+    # Final fallback - try langchain anyway
     try:
         from langchain_groq import ChatGroq
         if GROQ_KEY:
-            llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_KEY, temperature=0.1)
-            print("  Using Groq llama-3.3-70b")
-            return llm
+            return ChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_KEY, temperature=0.1)
     except Exception as e:
-        print(f"  Groq LLM init failed: {e}")
-    try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        if GEMINI_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", google_api_key=GEMINI_KEY, temperature=0.1)
-            print("  Using Gemini 2.0 Flash")
-            return llm
-    except Exception as e:
-        print(f"  Gemini LLM init failed: {e}")
+        print(f"  LangChain Groq failed: {e}")
     try:
         from langchain_openai import ChatOpenAI
         if OPENAI_KEY:
-            llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
-            print("  Using OpenAI gpt-4o-mini")
-            return llm
+            return ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_KEY, temperature=0.1)
     except Exception as e:
-        print(f"  OpenAI LLM init failed: {e}")
+        print(f"  LangChain OpenAI failed: {e}")
     raise Exception("No LLM available for Browser Use")
 
 def extract_json(text):
