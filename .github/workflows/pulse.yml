@@ -21,7 +21,7 @@ on:
 
 jobs:
   scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -32,11 +32,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install playwright==1.44.0 groq openai requests python-dotenv supabase
-          python -m playwright install chromium --with-deps
+
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium --with-deps
 
       - name: Run LAM v6
         env:
@@ -49,8 +51,7 @@ jobs:
           LAM_RUN_ID: ${{ github.event.inputs.lam_run_id }}
         run: |
           TARGET="${{ github.event.inputs.target_url }}"
-          MODE="${{ github.event.inputs.scan_mode }}"
-          echo "Mode: $MODE | Target: $TARGET"
+          echo "Target: $TARGET"
           if [ -n "$TARGET" ]; then
             python3 agents/lam-agent-v6.py "$TARGET"
           else
