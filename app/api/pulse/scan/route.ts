@@ -109,6 +109,17 @@ export async function POST(req: NextRequest) {
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'Missing url' }, { status: 400 })
 
+  // Check if we have a previous completed scan for this URL to use as score baseline
+  const { data: prevScan } = await svc.from('pulse_scans')
+    .select('overall_score, trust_score, conversion_score, security_score, mobile_score, grade')
+    .eq('user_id', user.id)
+    .eq('url', url)
+    .eq('status', 'complete')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  const lockedScores = prevScan || null
+
   const { data: row, error: ie } = await svc.from('pulse_scans').insert({
     user_id: user.id, url, scan_type: 'llm',
     status: 'scanning', progress: 5, progress_message: 'Starting scan...'

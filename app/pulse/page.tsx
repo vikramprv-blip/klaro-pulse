@@ -1,16 +1,14 @@
 'use client'
 import { useState } from 'react'
 
-const I = '#4f46e5'  // indigo primary
-const IC = '#06b6d4' // cyan accent
-const ID = '#3730a3' // indigo dark
-const IL = '#eef2ff' // indigo light bg
+const I = '#4f46e5'
+const IC = '#06b6d4'
+const T1 = '#0f172a'
+const T2 = '#475569'
+const T3 = '#94a3b8'
 const W = 'white'
-const G1 = '#f8fafc' // grey 1
-const G2 = '#f1f5f9' // grey 2
-const T1 = '#0f172a' // text primary
-const T2 = '#475569' // text secondary
-const T3 = '#94a3b8' // text tertiary
+const G1 = '#f8fafc'
+const IL = '#eef2ff'
 
 export default function PulsePage() {
   const [url, setUrl] = useState('')
@@ -25,35 +23,18 @@ export default function PulsePage() {
     setScanned(true)
   }
 
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Klaro Pulse",
-    "applicationCategory": "BusinessApplication",
-    "description": "AI-powered website intelligence tool. Scans any public website for UX, conversion, security, ADA compliance and DNS health in 30 seconds.",
-    "url": "https://klaro.services/pulse",
-    "offers": [
-      { "@type": "Offer", "name": "Single Report", "price": "59.99", "priceCurrency": "USD" },
-      { "@type": "Offer", "name": "Starter", "price": "149", "priceCurrency": "USD", "billingIncrement": "P1M" },
-      { "@type": "Offer", "name": "Growth", "price": "399", "priceCurrency": "USD", "billingIncrement": "P1M" },
-      { "@type": "Offer", "name": "Agency", "price": "599", "priceCurrency": "USD", "billingIncrement": "P1M" }
-    ],
-    "creator": { "@type": "Organization", "name": "Klaro Global", "url": "https://klaro.services" }
-  }
-
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: W, color: T1 }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #e2e8f0', padding: '0 40px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', background: `linear-gradient(135deg, ${I}, ${IC})`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900, color: 'white' }}>K</div>
+            <img src="/klaro-logo.png" alt="Klaro" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
             <div style={{ fontSize: '16px', fontWeight: 800, color: T1 }}>Klaro <span style={{ color: I }}>Pulse</span></div>
           </div>
           <div style={{ display: 'flex', gap: '24px' }}>
-            {[['Features', '#features'], ['Pricing', '#pricing'], ['Partners', '#partners'], ['Docs', '#']].map(([label, href]) => (
+            {[['Features', '#features'], ['Pricing', '#pricing'], ['Partners', '#partners']].map(([label, href]) => (
               <a key={label} href={href} style={{ fontSize: '14px', color: T2, textDecoration: 'none', fontWeight: 500 }}>{label}</a>
             ))}
           </div>
@@ -67,22 +48,19 @@ export default function PulsePage() {
       {/* Hero */}
       <section style={{ background: `linear-gradient(135deg, ${IL} 0%, white 50%, #ecfeff 100%)`, padding: '80px 40px 60px', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: IL, border: `1px solid ${I}33`, borderRadius: '20px', padding: '6px 16px', marginBottom: '24px' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: IC, animation: 'pulse 2s infinite' }}></div>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: IC }}></div>
           <span style={{ fontSize: '12px', fontWeight: 700, color: I, letterSpacing: '0.05em' }}>LIVE · Powered by AI + LAM Agent</span>
         </div>
-
         <h1 style={{ fontSize: '56px', fontWeight: 900, color: T1, lineHeight: 1.1, marginBottom: '20px', maxWidth: '800px', margin: '0 auto 20px' }}>
-          Know your website's score<br />
+          Know your website score<br />
           <span style={{ background: `linear-gradient(135deg, ${I}, ${IC})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>in 30 seconds</span>
         </h1>
-
         <p style={{ fontSize: '18px', color: T2, maxWidth: '580px', margin: '0 auto 40px', lineHeight: 1.7 }}>
-          AI audits any public website for UX, conversion, security, ADA compliance and DNS health. No installation. No login to target site. Works on your competitors too.
+          AI audits any public website for UX, conversion, security, ADA compliance and DNS health. No installation. Works on competitor sites too.
         </p>
 
-        {/* Live scanner */}
         <div style={{ maxWidth: '600px', margin: '0 auto 24px' }}>
-          <div style={{ display: 'flex', gap: '10px', background: W, border: `2px solid ${scanned ? I : '#e2e8f0'}`, borderRadius: '12px', padding: '6px 6px 6px 18px', boxShadow: '0 4px 24px rgba(79,70,229,0.1)', transition: 'border-color 0.3s' }}>
+          <div style={{ display: 'flex', gap: '10px', background: W, border: `2px solid ${scanned ? I : '#e2e8f0'}`, borderRadius: '12px', padding: '6px 6px 6px 18px', boxShadow: '0 4px 24px rgba(79,70,229,0.1)' }}>
             <input
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: '15px', color: T1, background: 'transparent', fontFamily: 'inherit' }}
               placeholder="https://yourwebsite.com"
@@ -90,9 +68,7 @@ export default function PulsePage() {
               onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !scanning && handleScan()}
             />
-            <button
-              onClick={handleScan}
-              disabled={scanning}
+            <button onClick={handleScan} disabled={scanning}
               style={{ padding: '10px 24px', background: scanning ? T3 : `linear-gradient(135deg, ${I}, ${IC})`, color: W, border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: scanning ? 'default' : 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               {scanning ? '⏳ Scanning...' : 'Scan Free →'}
             </button>
@@ -100,18 +76,14 @@ export default function PulsePage() {
           <div style={{ fontSize: '12px', color: T3, marginTop: '8px' }}>Free scan · No credit card · Results in 30 seconds</div>
         </div>
 
-        {/* Blurred result teaser */}
         {scanned && (
           <div style={{ maxWidth: '700px', margin: '0 auto', position: 'relative' }}>
             <div style={{ filter: 'blur(4px)', background: W, border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div>
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: T1 }}>yourwebsite.com</div>
-                  <div style={{ fontSize: '12px', color: T3 }}>Industry: Professional Services</div>
-                </div>
+                <div><div style={{ fontSize: '20px', fontWeight: 800 }}>yourwebsite.com</div></div>
                 <div style={{ fontSize: '48px', fontWeight: 900, color: '#d97706' }}>68</div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
                 {[['Trust', 72, '#16a34a'], ['Conversion', 55, '#d97706'], ['Security', 80, '#16a34a'], ['Mobile', 65, '#d97706']].map(([l, v, c]) => (
                   <div key={l as string} style={{ background: G1, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
                     <div style={{ fontSize: '22px', fontWeight: 800, color: c as string }}>{v}</div>
@@ -119,9 +91,8 @@ export default function PulsePage() {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: '13px', color: T2 }}>Your site has 3 critical conversion issues and missing email security records...</div>
             </div>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', borderRadius: '16px', backdropFilter: 'blur(2px)' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', borderRadius: '16px', backdropFilter: 'blur(2px)' }}>
               <div style={{ fontSize: '16px', fontWeight: 800, color: T1, marginBottom: '8px' }}>Your results are ready!</div>
               <div style={{ fontSize: '13px', color: T2, marginBottom: '16px' }}>Create a free account to see your full report</div>
               <a href="/signup" style={{ padding: '12px 28px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>See Full Report — Free →</a>
@@ -129,7 +100,6 @@ export default function PulsePage() {
           </div>
         )}
 
-        {/* Social proof */}
         <div style={{ display: 'flex', gap: '32px', justifyContent: 'center', marginTop: '40px', flexWrap: 'wrap' }}>
           {[['500+', 'Sites scanned'], ['5 sec', 'Avg scan time'], ['14-day', 'Free trial'], ['40%', 'CPA revenue share']].map(([val, label]) => (
             <div key={label} style={{ textAlign: 'center' }}>
@@ -140,7 +110,7 @@ export default function PulsePage() {
         </div>
       </section>
 
-      {/* What we check */}
+      {/* Features */}
       <section id="features" style={{ padding: '80px 40px', background: W }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
@@ -148,7 +118,6 @@ export default function PulsePage() {
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: T1, marginBottom: '12px' }}>Everything your site needs to win</h2>
             <p style={{ fontSize: '16px', color: T2, maxWidth: '500px', margin: '0 auto' }}>One scan covers what used to take 5 different tools and a consultant.</p>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
             {[
               { icon: '🎯', title: 'UX & Conversion', color: I, desc: 'Identifies exactly what stops visitors from becoming clients. Conversion killers, friction points, CTA effectiveness.', tags: ['Friction Analysis', 'CTA Score', 'Quick Wins'] },
@@ -158,7 +127,7 @@ export default function PulsePage() {
               { icon: '📊', title: 'Competitive Intel', color: IC, desc: 'Scan competitor sites to see exactly where they win and where your opportunity lies.', tags: ['Side-by-Side', 'Bulk Scan', 'Win Analysis'] },
               { icon: '📅', title: '90-Day Roadmap', color: '#16a34a', desc: 'Not just problems — a prioritised action plan with costs, timelines and expected score improvements.', tags: ['Priority Actions', 'Cost Estimates', 'Score Targets'] },
             ].map(({ icon, title, color, desc, tags }) => (
-              <div key={title} style={{ background: G1, border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', transition: 'box-shadow 0.2s' }}>
+              <div key={title} style={{ background: G1, border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px' }}>
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>{icon}</div>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: T1, marginBottom: '8px' }}>{title}</div>
                 <div style={{ fontSize: '13px', color: T2, lineHeight: 1.6, marginBottom: '14px' }}>{desc}</div>
@@ -173,15 +142,38 @@ export default function PulsePage() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section style={{ padding: '80px 40px', background: T1 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>HOW IT WORKS</div>
+            <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '12px' }}>Four steps from URL to full AI audit report</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
+            {[
+              { n: '1', title: 'Paste any URL', desc: 'Any public website — a competitor, a client, a law firm. No setup, no login to the target site.' },
+              { n: '2', title: 'AI scans everything', desc: 'Our agent browses like a human. AI analyses UX, trust, conversion, compliance and DNS security.' },
+              { n: '3', title: 'Plain English report', desc: 'No jargon. No WCAG numbers. Just: here is the problem, here is the money you are losing.' },
+              { n: '4', title: 'Share with clients', desc: 'One click to download a PDF. Send it before the meeting. They\'ll be impressed before you arrive.' },
+            ].map(({ n, title, desc }) => (
+              <div key={n} style={{ background: '#0f1a2e', border: '1px solid #1e3a5f', borderRadius: '16px', padding: '24px' }}>
+                <div style={{ width: '32px', height: '32px', background: I, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: W, marginBottom: '16px' }}>{n}</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: W, marginBottom: '8px' }}>{title}</div>
+                <div style={{ fontSize: '13px', color: T3, lineHeight: 1.6 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* vs competitors */}
       <section style={{ padding: '80px 40px', background: G1 }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: I, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>WHY KLARO PULSE</div>
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: T1, marginBottom: '12px' }}>No installation. Works on any site.</h2>
-            <p style={{ fontSize: '16px', color: T2 }}>Backend compliance tools require IT integration and cost $15,000+/year. We audit any public website in 30 seconds.</p>
+            <p style={{ fontSize: '16px', color: T2 }}>Backend compliance tools cost $15,000+/year and require IT integration. We audit any public website in 30 seconds.</p>
           </div>
-
           <div style={{ background: W, borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -224,24 +216,23 @@ export default function PulsePage() {
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: T1, marginBottom: '12px' }}>Simple, transparent pricing</h2>
             <p style={{ fontSize: '16px', color: T2 }}>Start free. No credit card. Upgrade when you need more.</p>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
             {[
-              { name: 'Single Report', price: '$59.99', period: 'one-off', scans: '1 report', features: ['Full 5-page audit', '2 competitor comparisons', 'PDF download', 'DNS security check', '90-day roadmap'], color: '#475569', popular: false },
-              { name: 'Starter', price: '$149', period: '/month', scans: '5 reports/mo', features: ['Everything in Single', '2 competitor reports', 'Email delivery', 'Shareable links', '14-day free trial'], color: I, popular: false },
-              { name: 'Growth', price: '$399', period: '/month', scans: '20 reports/mo', features: ['Everything in Starter', '3 competitors per scan', 'Bulk scanner', 'Weekly monitoring', 'White-label PDF'], color: I, popular: true },
-              { name: 'Agency', price: '$599', period: '/month', scans: 'Unlimited', features: ['Everything in Growth', '5 competitors per scan', 'LAM audit access', 'API access', 'Reseller rights'], color: '#7c3aed', popular: false },
+              { name: 'Single Report', price: '$59.99', period: 'one-off', scans: '1 report', color: '#475569', popular: false, features: ['Full 5-page audit', '2 competitor comparisons', 'PDF download', 'DNS security check', '90-day roadmap'] },
+              { name: 'Starter', price: '$149', period: '/month', scans: '5 reports/mo', color: I, popular: false, features: ['Everything in Single', '2 competitor reports', 'Email delivery', 'Shareable links', '14-day free trial'] },
+              { name: 'Growth', price: '$399', period: '/month', scans: '20 reports/mo', color: I, popular: true, features: ['Everything in Starter', '3 competitors per scan', 'Bulk scanner', 'Weekly monitoring', 'White-label PDF'] },
+              { name: 'Agency', price: '$599', period: '/month', scans: 'Unlimited', color: '#7c3aed', popular: false, features: ['Everything in Growth', '5 competitors per scan', 'LAM audit access', 'API access', 'Reseller rights'] },
             ].map(({ name, price, period, scans, features, color, popular }) => (
-              <div key={name} style={{ background: popular ? `linear-gradient(135deg, ${IL}, white)` : W, border: `2px solid ${popular ? I : '#e2e8f0'}`, borderRadius: '16px', padding: '24px', position: 'relative' }}>
-                {popular && <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: I, color: W, fontSize: '10px', fontWeight: 700, padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>MOST POPULAR</div>}
+              <div key={name} style={{ background: popular ? IL : W, border: `2px solid ${popular ? I : '#e2e8f0'}`, borderRadius: '16px', padding: '24px', position: 'relative' }}>
+                {popular && <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: I, color: W, fontSize: '10px', fontWeight: 700, padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>MOST POPULAR</div>}
                 <div style={{ fontSize: '14px', fontWeight: 700, color: T1, marginBottom: '8px', marginTop: popular ? '8px' : '0' }}>{name}</div>
-                <div style={{ fontSize: '36px', fontWeight: 900, color: T1, marginBottom: '2px', lineHeight: 1 }}>{price}</div>
+                <div style={{ fontSize: '36px', fontWeight: 900, color: T1, lineHeight: 1 }}>{price}</div>
                 <div style={{ fontSize: '13px', color: T3, marginBottom: '4px' }}>{period}</div>
                 <div style={{ fontSize: '12px', fontWeight: 600, color, marginBottom: '16px' }}>{scans}</div>
                 <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', marginBottom: '20px' }}>
                   {features.map(f => (
-                    <div key={f} style={{ fontSize: '12px', color: T2, padding: '4px 0', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
+                    <div key={f} style={{ fontSize: '12px', color: T2, padding: '4px 0', display: 'flex', gap: '8px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span> {f}
                     </div>
                   ))}
                 </div>
@@ -253,35 +244,37 @@ export default function PulsePage() {
           </div>
 
           {/* LAM pricing */}
-          <div style={{ background: `linear-gradient(135deg, #faf5ff, #f0f9ff)`, border: '1px solid #e9d5ff', borderRadius: '16px', padding: '32px', marginTop: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>🤖 LAM AGENT AUDITS</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: T1, marginBottom: '6px' }}>AI visits your site as a real client</div>
-                <div style={{ fontSize: '14px', color: T2, maxWidth: '500px', lineHeight: 1.6 }}>Full journey testing, contact form submission, ADA compliance, SOC2 surface audit, and authenticated flow testing. Takes 8-12 minutes.</div>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                {[['One-off Audit', '$299'], ['Monthly Monitor', '$499/mo'], ['LAM + SOC Bundle', '$7,999']].map(([name, price]) => (
-                  <div key={name} style={{ background: W, border: '1px solid #e9d5ff', borderRadius: '12px', padding: '16px 20px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#7c3aed' }}>{price}</div>
-                    <div style={{ fontSize: '11px', color: T2, marginTop: '4px' }}>{name}</div>
-                  </div>
-                ))}
-              </div>
+          <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f0f9ff)', border: '1px solid #e9d5ff', borderRadius: '16px', padding: '32px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>🤖 LAM AGENT AUDITS</div>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: T1, marginBottom: '8px' }}>AI visits your site as a real client</div>
+            <div style={{ fontSize: '14px', color: T2, marginBottom: '24px', lineHeight: 1.6 }}>Full journey testing, ADA compliance, SOC2 surface audit. Takes 8-12 minutes.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
+              {[
+                { name: 'One-off Audit', price: '$299', period: 'one-time', desc: 'Single deep LAM audit' },
+                { name: 'Monthly Monitor', price: '$499', period: '/month', desc: 'Weekly LAM + alerts' },
+                { name: 'LAM + SOC Bundle', price: '$7,999', period: '+ $1,299/mo', desc: 'Full SOC monitoring' },
+                { name: 'Self-hosted', price: '$4,999', period: 'one-time', desc: 'LAM in your infrastructure' },
+              ].map(({ name, price, period, desc }) => (
+                <div key={name} style={{ background: W, border: '1px solid #e9d5ff', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', marginBottom: '6px' }}>{name}</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: T1, lineHeight: 1 }}>{price}</div>
+                  <div style={{ fontSize: '11px', color: T3, marginBottom: '6px' }}>{period}</div>
+                  <div style={{ fontSize: '11px', color: T2 }}>{desc}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* CPA Partner section */}
+      {/* CPA Partners */}
       <section id="partners" style={{ padding: '80px 40px', background: `linear-gradient(135deg, ${IL} 0%, #ecfeff 100%)` }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: I, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>CPA & ACCOUNTING FIRM PARTNERS</div>
           <h2 style={{ fontSize: '36px', fontWeight: 900, color: T1, marginBottom: '16px' }}>Earn 40% on every client scan</h2>
           <p style={{ fontSize: '16px', color: T2, maxWidth: '560px', margin: '0 auto 40px', lineHeight: 1.7 }}>
-            White-label Klaro Pulse under your firm's brand. Run AI audits for clients. We handle the tech — you keep 40% of every scan revenue, forever.
+            White-label Klaro Pulse under your firm brand. Run AI audits for clients. We handle the tech — you keep 40% of every scan, forever.
           </p>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '32px', textAlign: 'left' }}>
             {[
               { icon: '🏷', title: 'White-label', desc: 'Reports branded with your firm name and logo. Clients never see Klaro Pulse.' },
@@ -295,7 +288,6 @@ export default function PulsePage() {
               </div>
             ))}
           </div>
-
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <a href="/partners" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>Apply for Partnership →</a>
             <a href="/partners" style={{ padding: '14px 32px', background: 'transparent', color: I, border: `2px solid ${I}`, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>Learn More</a>
@@ -303,54 +295,26 @@ export default function PulsePage() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* Enterprise */}
       <section style={{ padding: '80px 40px', background: T1 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>HOW IT WORKS</div>
-            <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '12px' }}>Four steps from URL to full AI audit report</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '60px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>ENTERPRISE & SELF-HOSTED</div>
+          <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '16px' }}>Need LAM inside your own infrastructure?</h2>
+          <p style={{ fontSize: '16px', color: T3, maxWidth: '560px', margin: '0 auto 40px', lineHeight: 1.7 }}>For EU/US enterprises requiring SOC 1/2/3 continuous monitoring within your own backend.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '16px', maxWidth: '600px', margin: '0 auto 32px', textAlign: 'left' }}>
             {[
-              { n: '1', title: 'Paste any URL', desc: 'Any public website — a competitor, a client, a law firm, a SaaS product. No setup, no login to the target site.' },
-              { n: '2', title: 'AI scans everything', desc: 'Our agent browses the site like a human. AI analyses UX, trust, conversion, compliance, DNS security and performance.' },
-              { n: '3', title: 'Plain English report', desc: 'No jargon. No WCAG numbers. Just: here is the problem, here is the money you are losing, here is how to fix it.' },
-              { n: '4', title: 'Share with clients', desc: 'One click to generate a shareable PDF. Send it to your prospect before the meeting. They'll be impressed before you arrive.' },
-            ].map(({ n, title, desc }) => (
-              <div key={n} style={{ background: '#0f1a2e', border: '1px solid #1e3a5f', borderRadius: '16px', padding: '24px', position: 'relative' }}>
-                <div style={{ width: '32px', height: '32px', background: I, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: W, marginBottom: '16px' }}>{n}</div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: W, marginBottom: '8px' }}>{title}</div>
-                <div style={{ fontSize: '13px', color: T3, lineHeight: 1.6 }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Enterprise */}
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>ENTERPRISE & SELF-HOSTED</div>
-            <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '16px' }}>Need LAM inside your own infrastructure?</h2>
-            <p style={{ fontSize: '16px', color: T3, maxWidth: '560px', margin: '0 auto 32px', lineHeight: 1.7 }}>
-              For EU/US enterprises requiring SOC 1/2/3 continuous monitoring running within your own backend. Full implementation by our team.
-            </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '32px' }}>
-            {[
-              { title: 'LAM Setup & Installation', price: '$4,999', period: 'one-time', desc: 'Full LAM implementation into your own infrastructure. Your servers, your data.' },
-              { title: 'Continuous SOC Monitoring', price: '$1,299', period: '/month', desc: 'Weekly automated compliance checks. Evidence collection. Audit-ready reports.' },
-              { title: 'LAM + SOC Bundle', price: '$7,999 + $1,299', period: '/month', desc: 'Full installation plus ongoing monitoring. Best value for compliance-heavy firms.' },
-              { title: 'CPA Reseller Program', price: '40%', period: 'revenue share', desc: 'Offer LAM audits to your clients under your brand. We handle the tech.' },
+              { title: 'LAM Setup & Installation', price: '$4,999 one-time', period: '+ $1,299/month monitoring', desc: 'Full implementation into your infrastructure. Your servers, your data.' },
+              { title: 'CPA Reseller Program', price: '40% Revenue Share', period: 'on all client scans', desc: 'Offer LAM audits to clients under your brand. We handle the tech.' },
             ].map(({ title, price, period, desc }) => (
-              <div key={title} style={{ background: '#0f1a2e', border: '1px solid #1e3a5f', borderRadius: '14px', padding: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: IC, marginBottom: '8px' }}>{title}</div>
-                <div style={{ fontSize: '24px', fontWeight: 900, color: W, marginBottom: '2px', lineHeight: 1.1 }}>{price}</div>
-                <div style={{ fontSize: '11px', color: T3, marginBottom: '10px', fontStyle: 'italic' }}>{period}</div>
-                <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>{desc}</div>
+              <div key={title} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: IC, marginBottom: '6px' }}>{title}</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: W, marginBottom: '2px' }}>{price}</div>
+                <div style={{ fontSize: '11px', color: T3, marginBottom: '8px', fontStyle: 'italic' }}>{period}</div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>{desc}</div>
               </div>
             ))}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <a href="mailto:ops@klaro.services?subject=Enterprise Enquiry" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Talk to Us →</a>
-          </div>
+          <a href="mailto:ops@klaro.services?subject=Enterprise Enquiry" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Talk to Us →</a>
         </div>
       </section>
 
@@ -358,7 +322,7 @@ export default function PulsePage() {
       <footer style={{ padding: '40px', background: '#020617', borderTop: '1px solid #1e293b' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', background: `linear-gradient(135deg, ${I}, ${IC})`, borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: 'white' }}>K</div>
+            <img src="/klaro-logo.png" alt="Klaro" style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
             <div style={{ fontSize: '14px', fontWeight: 700, color: W }}>Klaro <span style={{ color: I }}>Pulse</span></div>
             <span style={{ color: '#334155', margin: '0 8px' }}>·</span>
             <span style={{ fontSize: '12px', color: T3 }}>AI-powered site intelligence</span>
