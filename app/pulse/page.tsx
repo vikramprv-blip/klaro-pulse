@@ -319,20 +319,78 @@ export default function PulsePage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: '40px', background: '#020617', borderTop: '1px solid #1e293b' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/klaro-logo.png" alt="Klaro" style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
-            <div style={{ fontSize: '14px', fontWeight: 700, color: W }}>Klaro <span style={{ color: I }}>Pulse</span></div>
-            <span style={{ color: '#334155', margin: '0 8px' }}>·</span>
-            <span style={{ fontSize: '12px', color: T3 }}>AI-powered site intelligence</span>
+      <footer style={{ background: '#020617', borderTop: '1px solid #1e293b' }}>
+        {/* Other Klaro products */}
+        <div style={{ borderBottom: '1px solid #0f172a', padding: '40px' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px' }}>OTHER KLARO PRODUCTS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
+              {[
+                { name: 'Klaro CA Suite', region: '🇮🇳 India', desc: 'Practice OS for Chartered Accountants — billing, compliance, documents, workflows.', href: 'https://klaro.services/in' },
+                { name: 'Klaro US', region: '🇺🇸 United States', desc: 'Secure client document portal for tax, accounting and advisory firms.', href: 'https://klaro.services/us' },
+                { name: 'Klaro Lawyer', region: '🇮🇳 India', desc: 'Case management, client portal and billing for law firms.', href: 'https://klaro.services/in' },
+                { name: 'Klaro HR', region: '🌍 Global', desc: 'HR and compliance management for multi-jurisdiction teams.', href: 'https://klaro.services' },
+              ].map(({ name, region, desc, href }) => (
+                <a key={name} href={href} style={{ textDecoration: 'none', background: '#0a0f1a', border: '1px solid #1e293b', borderRadius: '12px', padding: '16px', display: 'block', transition: 'border-color 0.2s' }}>
+                  <div style={{ fontSize: '11px', color: '#475569', marginBottom: '4px' }}>{region}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '6px' }}>{name}</div>
+                  <div style={{ fontSize: '11px', color: '#475569', lineHeight: 1.5 }}>{desc}</div>
+                </a>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '24px' }}>
-            {[['Privacy', 'https://klaro.services/privacy'], ['Terms', 'https://klaro.services/terms'], ['Partners', '/partners'], ['Contact', 'mailto:ops@klaro.services']].map(([label, href]) => (
-              <a key={label} href={href} style={{ fontSize: '12px', color: T3, textDecoration: 'none' }}>{label}</a>
-            ))}
+        </div>
+
+        {/* Main footer */}
+        <div style={{ padding: '32px 40px' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '32px', marginBottom: '32px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <img src="/klaro-logo.png" alt="Klaro" style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: 'white' }}>Klaro <span style={{ color: I }}>Pulse</span></div>
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.7, marginBottom: '16px' }}>
+                  AI-powered site intelligence. Scan any website in 30 seconds for UX, security, ADA compliance and DNS health.
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569' }}>
+                  📧 <a href="mailto:ops@klaro.services" style={{ color: '#818cf8', textDecoration: 'none' }}>ops@klaro.services</a>
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                  🔒 <a href="mailto:privacy@klaro.services" style={{ color: '#818cf8', textDecoration: 'none' }}>privacy@klaro.services</a>
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                  🤝 <a href="mailto:partners@klaro.services" style={{ color: '#818cf8', textDecoration: 'none' }}>partners@klaro.services</a>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Product</div>
+                {[['Features', '#features'], ['Pricing', '#pricing'], ['LAM Audit', '#pricing'], ['Compare Sites', '/compare'], ['Bulk Scanner', '/bulk'], ['CPA Partners', '/partners']].map(([label, href]) => (
+                  <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: '#475569', textDecoration: 'none', padding: '3px 0' }}>{label}</a>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Company</div>
+                {[['About Klaro', 'https://klaro.services'], ['Blog', 'https://klaro.services'], ['Careers', 'mailto:ops@klaro.services'], ['Press', 'mailto:ops@klaro.services'], ['Contact', 'mailto:ops@klaro.services']].map(([label, href]) => (
+                  <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: '#475569', textDecoration: 'none', padding: '3px 0' }}>{label}</a>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Legal</div>
+                {[['Privacy Policy', 'https://klaro.services/privacy'], ['Terms of Service', 'https://klaro.services/terms'], ['Cookie Policy', '/pulse/cookies'], ['GDPR', 'https://klaro.services/privacy'], ['DPDP Compliance', 'https://klaro.services/privacy']].map(([label, href]) => (
+                  <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: '#475569', textDecoration: 'none', padding: '3px 0' }}>{label}</a>
+                ))}
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid #0f172a', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ fontSize: '12px', color: '#334155' }}>© 2026 Klaro Global · All rights reserved</div>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {[['🇪🇺 GDPR', ''], ['🇺🇸 CCPA', ''], ['🇮🇳 DPDP', ''], ['🇨🇦 PIPEDA', '']].map(([label]) => (
+                  <span key={label} style={{ fontSize: '11px', color: '#334155', background: '#0a0f1a', border: '1px solid #1e293b', borderRadius: '6px', padding: '3px 8px' }}>{label}</span>
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#475569' }}>© 2026 Klaro Global</div>
         </div>
       </footer>
     </div>
