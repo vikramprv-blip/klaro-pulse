@@ -74,7 +74,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
               <div style={{ fontSize: '32px', fontWeight: 900, color: 'white', marginBottom: '4px' }}>{displayName}</div>
               {companyName && companyName !== domain && <div style={{ fontSize: '13px', color: '#475569', marginBottom: '2px' }}>{domain}</div>}
               <a href={scan.url} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: '#334155' }}>{scan.url}</a>
-              {r.industry && <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '20px', padding: '3px 12px', display: 'inline-block', marginTop: '8px' }}>🏢 {r.industry}</div>}
+              {r.industry && <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px', background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '20px', padding: '3px 12px', display: 'inline-block' }}>🏢 {r.industry}</div>}
               {r.one_line_verdict && (
                 <div style={{ fontSize: '15px', fontStyle: 'italic', color: '#94a3b8', marginTop: '16px', lineHeight: 1.6, borderLeft: '3px solid #6366f1', paddingLeft: '16px' }}>
                   "{r.one_line_verdict}"
