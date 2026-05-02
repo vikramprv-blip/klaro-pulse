@@ -127,8 +127,11 @@ def extract_json(text):
     return {}
 
 async def browse_site(target_url: str) -> dict:
-    """Visit site with real Playwright browser and collect data"""
+    """Visit site with real Playwright browser - deep multi-page audit"""
     from playwright.async_api import async_playwright
+    from urllib.parse import urljoin, urlparse
+
+    base_domain = urlparse(target_url).netloc
 
     data = {
         "pages": [],
@@ -146,110 +149,232 @@ async def browse_site(target_url: str) -> dict:
         "nav_links": [],
         "cta_buttons": [],
         "page_texts": {},
-        "screenshots": [],
         "load_time_ms": 0,
+        "form_fields": [],
+        "third_party_scripts": [],
+        "mobile_viewport_issues": [],
         "errors": []
     }
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
-            args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
         )
+
+        # Desktop context
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
 
+        visited_urls = set()
+
+        async def analyse_page(url, label):
+            """Visit and analyse a single page"""
+            if url in visited_urls:
+                return
+            visited_urls.add(url)
+            try:
+                print(f"    Visiting: {label} — {url}")
+                start = time.time()
+                await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                await page.wait_for_timeout(2000)  # Let JS render
+                load_ms = int((time.time() - start) * 1000)
+
+                content = await page.content()
+                text = await page.evaluate("() => document.body ? document.body.innerText : ''")
+                title = await page.title()
+
+                data["pages"].append({"url": url, "title": title, "load_ms": load_ms})
+                data["page_texts"][label] = text[:2500]
+
+                if label == "home":
+                    data["load_time_ms"] = load_ms
+
+                # Update signals from each page
+                if re.search(r"cookie|consent|gdpr", content, re.I):
+                    data["has_cookie_banner"] = True
+                if re.search(r"privacy.policy|privacy-policy", content, re.I):
+                    data["has_privacy_policy"] = True
+                if re.search(r"terms.of.service|terms-of-service|terms.and.conditions", content, re.I):
+                    data["has_terms"] = True
+                if re.search(r"(\+\d{1,3}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}", text):
+                    data["has_phone"] = True
+                if re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", text):
+                    data["has_email"] = True
+                if re.search(r"pricing|price|per month|\$\d|£\d|₹\d", content, re.I):
+                    data["has_pricing"] = True
+                if re.search(r"testimonial|review|rated|stars|trustpilot|clutch|g2", content, re.I):
+                    data["has_testimonials"] = True
+                if re.search(r"<form", content, re.I):
+                    data["has_contact_form"] = True
+                if re.search(r"sign.in|login|log.in", content, re.I):
+                    data["has_login"] = True
+                if re.search(r"sign.up|register|get.started|free.trial", content, re.I):
+                    data["has_signup"] = True
+
+                # Check third party scripts
+                scripts = await page.evaluate("""() => {
+                    return Array.from(document.querySelectorAll("script[src]"))
+                        .map(s => s.src)
+                        .filter(s => s && !s.includes(window.location.hostname))
+                        .slice(0, 10);
+                }""")
+                data["third_party_scripts"].extend([s for s in scripts if s not in data["third_party_scripts"]])
+
+                return text, content
+            except Exception as e:
+                data["errors"].append(f"{label}: {str(e)[:100]}")
+                print(f"    Error on {label}: {e}")
+                return "", ""
+
         try:
-            # Visit homepage
-            start = time.time()
-            await page.goto(target_url, wait_until="networkidle", timeout=30000)
-            data["load_time_ms"] = int((time.time() - start) * 1000)
+            # 1. Homepage
+            await analyse_page(target_url, "home")
 
-            # Get page content
-            content = await page.content()
-            text = await page.evaluate("() => document.body.innerText")
-            title = await page.title()
-            url = page.url
-
-            data["pages"].append({"url": url, "title": title})
-            data["page_texts"]["home"] = text[:3000]
-
-            # Check signals
-            data["has_cookie_banner"] = bool(re.search(r'cookie|consent|gdpr', content, re.I))
-            data["has_privacy_policy"] = bool(re.search(r'privacy.policy|privacy-policy', content, re.I))
-            data["has_terms"] = bool(re.search(r'terms.of.service|terms-of-service|terms.and.conditions', content, re.I))
-            data["has_phone"] = bool(re.search(r'(\+\d{1,3}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}', text))
-            data["has_email"] = bool(re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text))
-            data["has_pricing"] = bool(re.search(r'pricing|price|per month|\$\d|£\d|₹\d', content, re.I))
-            data["has_testimonials"] = bool(re.search(r'testimonial|review|rated|stars|trustpilot|clutch', content, re.I))
-            data["has_contact_form"] = bool(re.search(r'<form', content, re.I))
-            data["has_login"] = bool(re.search(r'sign.in|login|log.in', content, re.I))
-            data["has_signup"] = bool(re.search(r'sign.up|register|get.started|free.trial', content, re.I))
-
-            # Get nav links
+            # Get all nav links from homepage
             nav_links = await page.evaluate("""() => {
-                const links = Array.from(document.querySelectorAll('nav a, header a'));
-                return links.slice(0, 15).map(a => ({text: a.innerText.trim(), href: a.href}));
+                const links = Array.from(document.querySelectorAll("nav a, header a, [role=navigation] a"));
+                return [...new Set(links.map(a => a.href))]
+                    .filter(h => h && h.startsWith("http"))
+                    .slice(0, 20);
             }""")
-            data["nav_links"] = [l for l in nav_links if l["text"]]
+            data["nav_links"] = nav_links
 
             # Get CTA buttons
             cta_buttons = await page.evaluate("""() => {
-                const btns = Array.from(document.querySelectorAll('button, a.btn, a.button, [class*="cta"], [class*="primary"]'));
-                return btns.slice(0, 10).map(b => b.innerText.trim()).filter(t => t.length > 0);
+                const btns = Array.from(document.querySelectorAll("button, a"));
+                return btns
+                    .filter(b => /get.started|sign.up|free.trial|contact|book|demo|try|start/i.test(b.innerText))
+                    .slice(0, 8)
+                    .map(b => b.innerText.trim());
             }""")
-            data["cta_buttons"] = cta_buttons[:8]
+            data["cta_buttons"] = cta_buttons
 
-            # ADA checks
-            ada_issues = await page.evaluate("""() => {
-                const imgs = Array.from(document.querySelectorAll('img'));
-                const imgsWithoutAlt = imgs.filter(img => !img.alt || img.alt.trim() === '').length;
-                const inputs = Array.from(document.querySelectorAll('input, select, textarea'));
+            # 2. Visit key pages from nav
+            priority_patterns = [
+                (r"pricing|price|plans", "pricing"),
+                (r"contact|get.in.touch|reach", "contact"),
+                (r"about|team|company|who.we", "about"),
+                (r"feature|product|solution|service", "features"),
+                (r"blog|news|resource", "blog"),
+            ]
+
+            pages_visited = 1
+            for link in nav_links[:15]:
+                if pages_visited >= 7:
+                    break
+                link_lower = link.lower()
+                # Only visit same domain
+                if base_domain not in link:
+                    continue
+                for pattern, label in priority_patterns:
+                    if re.search(pattern, link_lower) and label not in data["page_texts"]:
+                        await analyse_page(link, label)
+                        pages_visited += 1
+                        await page.wait_for_timeout(1500)
+                        break
+
+            # 3. Deep ADA audit on homepage
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(1500)
+
+            ada_checks = await page.evaluate("""() => {
+                const imgs = Array.from(document.querySelectorAll("img"));
+                const imgsWithoutAlt = imgs.filter(i => !i.alt || i.alt.trim() === "").length;
+                const inputs = Array.from(document.querySelectorAll("input, select, textarea"));
                 const inputsWithoutLabel = inputs.filter(inp => {
-                    const id = inp.id;
-                    if (!id) return true;
-                    return !document.querySelector('label[for="' + id + '"]');
+                    if (!inp.id) return true;
+                    return !document.querySelector(`label[for="${inp.id}"]`);
                 }).length;
-                const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+                const headings = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6"));
+                const h1Count = document.querySelectorAll("h1").length;
+                const links = Array.from(document.querySelectorAll("a"));
+                const emptyLinks = links.filter(a => !a.innerText.trim() && !a.getAttribute("aria-label")).length;
+                const hasSkipNav = !!document.querySelector("[href='#main'], [href='#content'], .skip-nav, .skip-link");
+                const lang = document.documentElement.lang;
+                const focusableElements = document.querySelectorAll("a, button, input, select, textarea, [tabindex]").length;
                 return {
                     imgs_total: imgs.length,
                     imgs_without_alt: imgsWithoutAlt,
                     inputs_total: inputs.length,
                     inputs_without_label: inputsWithoutLabel,
                     heading_count: headings.length,
-                    has_skip_nav: !!document.querySelector('[href="#main"], [href="#content"], .skip-nav'),
-                    lang_attribute: document.documentElement.lang || 'missing'
+                    h1_count: h1Count,
+                    empty_links: emptyLinks,
+                    has_skip_nav: hasSkipNav,
+                    lang_attribute: lang || "missing",
+                    focusable_elements: focusableElements
                 };
             }""")
-            data["ada_checks"] = ada_issues
+            data["ada_checks"] = ada_checks
 
-            # Try to visit contact page
-            contact_links = await page.evaluate("""() => {
-                const links = Array.from(document.querySelectorAll('a'));
-                return links
-                    .filter(a => /contact|get.in.touch|reach.us/i.test(a.innerText + a.href))
-                    .slice(0, 3)
-                    .map(a => a.href);
-            }""")
+            # 4. Mobile viewport check
+            mobile_context = await browser.new_context(
+                viewport={"width": 375, "height": 812},
+                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+            )
+            mobile_page = await mobile_context.new_page()
+            try:
+                await mobile_page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+                await mobile_page.wait_for_timeout(1500)
+                mobile_issues = await mobile_page.evaluate("""() => {
+                    const issues = [];
+                    const viewport = window.innerWidth;
+                    const body = document.body;
+                    if (body.scrollWidth > viewport + 10) issues.push("Horizontal scroll detected — content wider than viewport");
+                    const smallText = Array.from(document.querySelectorAll("p, span, div"))
+                        .filter(el => {
+                            const size = parseFloat(window.getComputedStyle(el).fontSize);
+                            return size > 0 && size < 12 && el.innerText.trim().length > 5;
+                        }).length;
+                    if (smallText > 3) issues.push(`${smallText} elements with text smaller than 12px`);
+                    const smallButtons = Array.from(document.querySelectorAll("button, a"))
+                        .filter(el => {
+                            const r = el.getBoundingClientRect();
+                            return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44);
+                        }).length;
+                    if (smallButtons > 0) issues.push(`${smallButtons} tap targets smaller than 44px (WCAG minimum)`);
+                    return issues;
+                }""")
+                data["mobile_viewport_issues"] = mobile_issues
+                print(f"    Mobile check: {len(mobile_issues)} issues found")
+            except Exception as e:
+                data["errors"].append(f"mobile: {str(e)[:100]}")
+            finally:
+                await mobile_context.close()
 
-            if contact_links:
+            # 5. Try contact form interaction
+            if data["has_contact_form"] and "contact" in data["page_texts"]:
                 try:
-                    await page.goto(contact_links[0], wait_until="networkidle", timeout=15000)
-                    contact_text = await page.evaluate("() => document.body.innerText")
-                    data["page_texts"]["contact"] = contact_text[:2000]
-                    data["has_contact_form"] = bool(re.search(r'<form', await page.content(), re.I))
-                except:
-                    pass
+                    contact_url = next((l for l in nav_links if re.search(r"contact", l, re.I)), None)
+                    if contact_url:
+                        await page.goto(contact_url, wait_until="domcontentloaded", timeout=15000)
+                        await page.wait_for_timeout(1000)
+                        form_fields = await page.evaluate("""() => {
+                            return Array.from(document.querySelectorAll("input, textarea, select"))
+                                .map(f => ({
+                                    type: f.type || f.tagName.toLowerCase(),
+                                    name: f.name || f.id || f.placeholder,
+                                    required: f.required,
+                                    label: document.querySelector(`label[for="${f.id}"]`)?.innerText || ""
+                                }))
+                                .filter(f => f.type !== "hidden" && f.type !== "submit");
+                        }""")
+                        data["form_fields"] = form_fields
+                        print(f"    Form fields found: {len(form_fields)}")
+                except Exception as e:
+                    data["errors"].append(f"form: {str(e)[:100]}")
 
         except Exception as e:
-            data["errors"].append(str(e))
+            data["errors"].append(f"main: {str(e)[:100]}")
             print(f"  Browser error: {e}")
         finally:
             await browser.close()
 
+    print(f"  Pages visited: {len(data['pages'])}")
     return data
 
 async def run_lam_audit(target_url: str):
