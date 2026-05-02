@@ -19,7 +19,7 @@ export default function SignUp() {
     setLoading(true)
     const { data, error: signUpError } = await sb.auth.signUp({
       email, password,
-      options: { emailRedirectTo: `https://klaro.services/pulse/dashboard` }
+      options: { emailRedirectTo: `https://klaro-pulse.vercel.app/auth/callback?next=/dashboard` }
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
     // Create pulse_users row via API route (uses service role, bypasses RLS)

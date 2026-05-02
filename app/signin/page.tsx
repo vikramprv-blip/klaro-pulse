@@ -34,7 +34,7 @@ export default function SignIn() {
           </button>
         </form>
         <p style={styles.foot}>
-          No account? <a href="/signup" style={styles.link}>Start free 14-day trial</a>
+          <a href="/reset-password" style={styles.link}>Forgot password?</a></p>n        <p style={styles.foot}>n          No account? <a href="/signup" style={styles.link}>Start free 14-day trial</a>
         </p>
         <p style={styles.foot}>
           <a href="https://klaro.services/pulse" style={styles.link}>← Back to Klaro Pulse</a>
