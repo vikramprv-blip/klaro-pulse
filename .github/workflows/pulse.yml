@@ -22,31 +22,10 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    container:
-      image: mcr.microsoft.com/playwright/python:v1.44.0-jammy
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Python dependencies
+      - name: LAM runs via local Docker runner
         run: |
-          pip install --no-cache-dir groq openai requests python-dotenv supabase
-
-      - name: Run LAM v6
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
-          SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
-          SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          LAM_USER_ID: ${{ github.event.inputs.user_id }}
-          LAM_RUN_ID: ${{ github.event.inputs.lam_run_id }}
-        run: |
-          TARGET="${{ github.event.inputs.target_url }}"
-          echo "Target: $TARGET"
-          if [ -n "$TARGET" ]; then
-            python3 agents/lam-agent-v6.py "$TARGET"
-          else
-            echo "No target URL provided"
-          fi
+          echo "LAM scans are processed by the local Docker runner"
+          echo "Target: ${{ github.event.inputs.target_url }}"
+          echo "Run ID: ${{ github.event.inputs.lam_run_id }}"
