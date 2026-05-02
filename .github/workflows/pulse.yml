@@ -3,13 +3,21 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: 'Single URL to scan (leave empty for batch)'
+        description: 'URL to scan'
         required: false
         default: ''
       scan_mode:
         description: 'Scan mode: standard or lam'
         required: false
         default: 'standard'
+      lam_run_id:
+        description: 'LAM run ID from lam_runs table'
+        required: false
+        default: ''
+      user_id:
+        description: 'User ID'
+        required: false
+        default: ''
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -17,48 +25,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install Node dependencies
-        run: npm install
       - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install browser-use==0.12.6
-          pip install langchain-google-genai langchain-groq langchain-openai
-          pip install playwright python-dotenv supabase google-generativeai
-          pip show browser-use | grep Version
+          pip install langchain-groq langchain-openai langchain-google-genai
+          pip install playwright python-dotenv supabase
+          python -m playwright install chromium --with-deps
       - name: Run scan
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          GH_MODELS_KEY: ${{ secrets.GH_MODELS_KEY }}
           SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LAM_USER_ID: ${{ github.event.inputs.user_id }}
+          LAM_RUN_ID: ${{ github.event.inputs.lam_run_id }}
         run: |
           TARGET="${{ github.event.inputs.target_url }}"
           MODE="${{ github.event.inputs.scan_mode }}"
+          echo "Mode: $MODE | Target: $TARGET"
           if [ "$MODE" = "lam" ] && [ -n "$TARGET" ]; then
-            echo "LAM scan: $TARGET"
+            echo "Starting LAM audit: $TARGET"
             python3 agents/lam-agent.py "$TARGET"
           elif [ -n "$TARGET" ]; then
             echo "Standard scan: $TARGET"
-            node agents/pulse-agent.js "$TARGET"
+            python3 agents/lam-agent.py "$TARGET"
           else
-            echo "Batch scan"
-            node agents/pulse-agent.js
+            echo "No target specified"
           fi
