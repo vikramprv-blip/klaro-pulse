@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getUserProfile } from '@/lib/auth'
 
@@ -38,8 +38,10 @@ export default function Dashboard() {
   const [bulkText, setBulkText] = useState('')
   const [lamUrl, setLamUrl] = useState('')
   const [scanning, setScanning] = useState(false)
+  const [activeScanId, setActiveScanId] = useState<string|null>(null)
   const [scanStatus, setScanStatus] = useState<{msg:string,type:'scanning'|'success'|'error'}|null>(null)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const pollRef = useRef<any>(null)
   const sb = createClient()
 
   const loadScans = useCallback(async () => {
@@ -60,14 +62,15 @@ export default function Dashboard() {
     })
   }, [])
 
+  // Poll every 2s when there's an active scan
   useEffect(() => {
-    if (!user?.id) return
-    const channel = sb.channel('pulse_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pulse_scans' }, () => loadScans())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lam_runs' }, () => loadScans())
-      .subscribe()
-    return () => { sb.removeChannel(channel) }
-  }, [user?.id])
+    if (activeScanId) {
+      pollRef.current = setInterval(() => loadScans(), 2000)
+    } else {
+      clearInterval(pollRef.current)
+    }
+    return () => clearInterval(pollRef.current)
+  }, [activeScanId])
 
   const plan = profile?.plan || 'trial'
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.trial
@@ -83,7 +86,7 @@ export default function Dashboard() {
 
   async function triggerScan(url: string, scanType = 'llm') {
     setScanning(true)
-    setScanStatus({ msg: `⏳ Scanning ${url}...`, type: 'scanning' })
+    setScanStatus({ msg: `⏳ Connecting to ${url}...`, type: 'scanning' })
     try {
       if (scanType === 'lam') {
         const res = await fetch('/api/pulse/trigger', {
@@ -92,26 +95,64 @@ export default function Dashboard() {
           body: JSON.stringify({ target_url: url, scan_mode: 'lam' })
         })
         const data = await res.json()
-        if (data.ok) setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
-        else throw new Error(data.error || 'LAM trigger failed')
+        if (data.ok) {
+          setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
+          await loadScans()
+        } else throw new Error(data.error || 'LAM trigger failed')
+        setScanning(false)
       } else {
-        setScanStatus({ msg: `⏳ Scanning ${url} — takes 30-60 seconds...`, type: 'scanning' })
+        // Fire scan — it will update progress in DB as it runs
         const res = await fetch('/api/pulse/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
         })
         const data = await res.json()
+        setScanning(false)
         if (data.ok) {
           setScanStatus({ msg: `✅ Scan complete — score: ${data.score}/100`, type: 'success' })
-        } else throw new Error(data.error || 'Scan failed')
+          setActiveScanId(null)
+        } else {
+          setScanStatus({ msg: `❌ ${data.error || 'Scan failed'}`, type: 'error' })
+          setActiveScanId(null)
+        }
+        await loadScans()
       }
     } catch (e: any) {
+      setScanning(false)
+      setActiveScanId(null)
       setScanStatus({ msg: `❌ ${e.message}`, type: 'error' })
     }
-    setScanning(false)
     setTimeout(() => setScanStatus(null), 10000)
-    setTimeout(() => loadScans(), 500)
+  }
+
+  async function handleScan() {
+    if (mode === 'llm') {
+      if (!urlInput.startsWith('http')) { setScanStatus({ msg: 'Enter a valid URL starting with https://', type: 'error' }); return }
+      const url = urlInput.trim()
+      setUrlInput('')
+      // Start polling immediately
+      setActiveScanId('pending')
+      await loadScans()
+      await triggerScan(url, 'llm')
+    } else if (mode === 'compare') {
+      const urls = compareUrls.filter(u => u.startsWith('http'))
+      if (urls.length < 2) { setScanStatus({ msg: 'Enter at least 2 valid URLs', type: 'error' }); return }
+      setActiveScanId('pending')
+      for (const u of urls) await triggerScan(u, 'compare')
+      setActiveScanId(null)
+    } else if (mode === 'bulk') {
+      const urls = bulkText.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'))
+      if (!urls.length) { setScanStatus({ msg: 'Enter at least 1 URL per line', type: 'error' }); return }
+      setActiveScanId('pending')
+      for (const u of urls) await triggerScan(u, 'bulk')
+      setActiveScanId(null)
+    } else if (mode === 'lam') {
+      if (!lamUrl.startsWith('http')) { setScanStatus({ msg: 'Enter a valid URL', type: 'error' }); return }
+      const url = lamUrl.trim()
+      setLamUrl('')
+      await triggerScan(url, 'lam')
+    }
   }
 
   async function cancelScan(scanId: string) {
@@ -120,25 +161,10 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_id: scanId })
     })
-    loadScans()
-  }
-
-  async function handleScan() {
-    if (mode === 'llm') {
-      if (!urlInput.startsWith('http')) { setScanStatus({ msg: 'Enter a valid URL starting with https://', type: 'error' }); return }
-      await triggerScan(urlInput.trim(), 'llm'); setUrlInput('')
-    } else if (mode === 'compare') {
-      const urls = compareUrls.filter(u => u.startsWith('http'))
-      if (urls.length < 2) { setScanStatus({ msg: 'Enter at least 2 valid URLs', type: 'error' }); return }
-      for (const u of urls) await triggerScan(u, 'compare')
-    } else if (mode === 'bulk') {
-      const urls = bulkText.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'))
-      if (!urls.length) { setScanStatus({ msg: 'Enter at least 1 URL per line', type: 'error' }); return }
-      for (const u of urls) await triggerScan(u, 'bulk')
-    } else if (mode === 'lam') {
-      if (!lamUrl.startsWith('http')) { setScanStatus({ msg: 'Enter a valid URL', type: 'error' }); return }
-      await triggerScan(lamUrl.trim(), 'lam'); setLamUrl('')
-    }
+    setActiveScanId(null)
+    setScanning(false)
+    setScanStatus(null)
+    await loadScans()
   }
 
   function toggleCard(id: string) {
@@ -192,7 +218,7 @@ export default function Dashboard() {
       <div style={S.main}>
         <div style={S.scanBar}>
           <div style={S.scanBarTop}>
-            <div style={S.scanBarTitle}>�� Scan any website</div>
+            <div style={S.scanBarTitle}>🔍 Scan any website</div>
             <div style={S.tabs}>
               {(['llm', 'compare', 'bulk', 'lam'] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
@@ -203,6 +229,7 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+
           {isLocked(mode) ? (
             <div style={S.upgradeBox}>
               <div style={{ fontWeight: 700, color: 'white', marginBottom: '6px' }}>
@@ -259,7 +286,34 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-              {scanStatus && (
+
+              {/* Live scan progress bar in scan bar */}
+              {scanning && activeScanId && (
+                <div style={{ marginTop: '16px', background: '#080c14', border: '1px solid #3b4fd8', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#818cf8', fontWeight: 600 }}>
+                      {scans.find(s => s.status === 'scanning')?.progress_message || 'Scanning...'}
+                    </span>
+                    <button style={S.cancelBtn} onClick={() => {
+                      const activeScan = scans.find(s => s.status === 'scanning')
+                      if (activeScan) cancelScan(activeScan.id)
+                      else { setScanning(false); setActiveScanId(null) }
+                    }}>✕ Cancel</button>
+                  </div>
+                  <div style={S.progressTrack}>
+                    <div style={{
+                      ...S.progressFill,
+                      width: `${scans.find(s => s.status === 'scanning')?.progress || 10}%`,
+                      transition: 'width 1s ease'
+                    }} />
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#334155', marginTop: '6px' }}>
+                    Results will appear below when complete · Takes 20-40 seconds
+                  </div>
+                </div>
+              )}
+
+              {scanStatus && !scanning && (
                 <div style={{ ...S.statusBar, ...(scanStatus.type === 'error' ? S.statusError : scanStatus.type === 'success' ? S.statusSuccess : S.statusScanning) }}>
                   {scanStatus.msg}
                 </div>
@@ -273,7 +327,7 @@ export default function Dashboard() {
             { val: scans.length + lamRuns.length, label: 'Total Scans', color: '#818cf8' },
             { val: avgScore || '—', label: 'Avg Score', color: '#4ade80', sub: 'out of 100' },
             { val: scans.filter(s => (s.overall_score || 0) < 50 && s.status === 'complete').length, label: 'Need Urgent Fix', color: '#f87171', sub: 'score below 50' },
-            { val: allItems.filter(s => s.status === 'pending' || s.status === 'scanning').length, label: 'In Progress', color: '#fbbf24' },
+            { val: allItems.filter(s => s.status === 'scanning' || s.status === 'pending').length, label: 'In Progress', color: '#fbbf24' },
           ].map(({ val, label, color, sub }) => (
             <div key={label} style={S.statCard}>
               <div style={{ ...S.statVal, color }}>{val}</div>
@@ -309,23 +363,25 @@ export default function Dashboard() {
             const r = item.report || {}
             const name = (() => { try { return new URL(item.url).hostname } catch { return item.url } })()
             return (
-              <div key={item.id} style={S.card}>
+              <div key={item.id} style={{ ...S.card, ...(isPending ? { borderColor: '#3b4fd8' } : {}) }}>
                 <div style={S.cardHeader}>
                   <div style={{ flex: 1 }}>
                     <div style={S.cardName}>{name}</div>
                     <a href={item.url} target="_blank" rel="noreferrer" style={S.cardUrl}>{item.url}</a>
                     <div style={S.cardMeta}>
-                      {ago(item.created_at)} · <span style={{ color: isPending ? '#fbbf24' : item.status === 'complete' ? '#4ade80' : item.status === 'error' ? '#f87171' : '#475569' }}>{item.status}</span>
+                      {ago(item.created_at)} · <span style={{ color: isPending ? '#818cf8' : item.status === 'complete' ? '#4ade80' : item.status === 'error' ? '#f87171' : '#475569' }}>{item.status}</span>
                       {isLam && <span style={{ color: '#a78bfa', fontWeight: 700 }}> · LAM</span>}
                       {item.scan_type === 'compare' && <span style={{ color: '#60a5fa', fontWeight: 700 }}> · COMPARE</span>}
                       {item.scan_type === 'bulk' && <span style={{ color: '#34d399', fontWeight: 700 }}> · BULK</span>}
                     </div>
                     {isPending && (
                       <div style={S.progressWrap}>
-                        <div style={S.progressTrack}>
-                          <div style={{ ...S.progressFill, width: `${item.progress || 5}%` }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={S.progressTrack}>
+                            <div style={{ ...S.progressFill, width: `${item.progress || 5}%` }} />
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>{item.progress_message || 'Starting...'}</div>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>{item.progress_message || 'Starting...'}</div>
                         <button style={S.cancelBtn} onClick={() => cancelScan(item.id)}>✕ Cancel</button>
                       </div>
                     )}
@@ -369,7 +425,7 @@ export default function Dashboard() {
                       <div style={S.detail}>
                         <div style={S.detailGrid}>
                           <div>
-                            <div style={{ ...S.detailHead, color: '#f87171' }}>🔴 Problems Found</div>
+                            <div style={{ ...S.detailHead, color: '#f87171' }}>�� Problems Found</div>
                             {(r.ux_friction_points || []).map((p: string, i: number) => <div key={i} style={S.detailItem}>⚠ {p}</div>)}
                             {!(r.ux_friction_points||[]).length && <div style={{ ...S.detailItem, color: '#334155' }}>None detected</div>}
                           </div>
@@ -382,6 +438,27 @@ export default function Dashboard() {
                             {(r.revenue_opportunities || []).map((p: string, i: number) => <div key={i} style={S.detailItem}>💰 {p}</div>)}
                           </div>
                         </div>
+                        {(r.strengths || []).length > 0 && (
+                          <div style={{ padding: '0 20px 16px' }}>
+                            <div style={{ ...S.detailHead, color: '#60a5fa', marginBottom: '8px' }}>✓ Strengths</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {(r.strengths || []).map((s: string, i: number) => (
+                                <span key={i} style={{ fontSize: '11px', background: '#0c1a3a', color: '#818cf8', border: '1px solid #3b4fd8', borderRadius: '20px', padding: '3px 10px' }}>✓ {s}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {r.priority_actions && (
+                          <div style={{ padding: '0 20px 16px' }}>
+                            <div style={{ ...S.detailHead, color: '#fbbf24', marginBottom: '10px' }}>📅 Priority Actions</div>
+                            {[['This Week', r.priority_actions.week_1, '#f87171'], ['This Month', r.priority_actions.month_1, '#fbbf24'], ['This Quarter', r.priority_actions.quarter_1, '#4ade80']].map(([label, val, color]) => val ? (
+                              <div key={label as string} style={{ ...S.detailItem, marginBottom: '6px', borderLeft: `3px solid ${color}` }}>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: color as string, display: 'block', marginBottom: '2px' }}>{label as string}</span>
+                                {val as string}
+                              </div>
+                            ) : null)}
+                          </div>
+                        )}
                       </div>
                     )}
                     {isExpanded && isLam && (
@@ -463,15 +540,15 @@ const S: Record<string, React.CSSProperties> = {
   filterBtnActive: { background: '#1e2d4a', color: '#818cf8', borderColor: '#3b4fd8' },
   searchInput: { marginLeft: 'auto', background: '#080c14', border: '1px solid #1e2a3a', borderRadius: '10px', padding: '5px 12px', color: 'white', fontSize: '12px', outline: 'none', width: '200px', fontFamily: 'inherit' },
   empty: { textAlign: 'center', padding: '80px 20px', color: '#1e2a3a' },
-  card: { background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px' },
+  card: { background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px', transition: 'border-color 0.2s' },
   cardHeader: { padding: '18px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' },
   cardName: { fontSize: '16px', fontWeight: 800, color: 'white', marginBottom: '3px' },
   cardUrl: { fontSize: '11px', color: '#334155', textDecoration: 'none' },
   cardMeta: { fontSize: '10px', color: '#475569', marginTop: '4px' },
-  progressWrap: { marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-  progressTrack: { flex: 1, minWidth: '120px', height: '4px', background: '#1e2a3a', borderRadius: '4px', overflow: 'hidden' },
-  progressFill: { height: '4px', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '4px', transition: 'width 0.5s ease' },
-  cancelBtn: { padding: '3px 10px', background: 'transparent', color: '#f87171', border: '1px solid #991b1b', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  progressWrap: { marginTop: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' },
+  progressTrack: { width: '100%', height: '6px', background: '#1e2a3a', borderRadius: '6px', overflow: 'hidden' },
+  progressFill: { height: '6px', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '6px', transition: 'width 1s ease' },
+  cancelBtn: { padding: '4px 12px', background: 'transparent', color: '#f87171', border: '1px solid #991b1b', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 },
   scoreRing: { width: '72px', height: '72px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '3px solid' },
   bars: { padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', borderTop: '1px solid #0d1520' },
   barItem: { fontSize: '11px' },
