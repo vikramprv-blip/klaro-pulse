@@ -5,84 +5,145 @@ export async function POST(req: NextRequest) {
   if (!url) return NextResponse.json({ error: 'Missing url' }, { status: 400 })
 
   let hostname = ''
-  try { hostname = new URL(url).hostname } catch { return NextResponse.json({ error: 'Invalid URL' }, { status: 400 }) }
-
-  const results: any = { hostname, checks: {} }
+  try { hostname = new URL(url).hostname } catch {
+    return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+  }
 
   async function dnsLookup(name: string, type: string) {
     try {
-      const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`, {
+      const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, {
         headers: { 'Accept': 'application/dns-json' },
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(6000)
       })
       const d = await r.json()
       return d.Answer || []
     } catch { return [] }
   }
 
-  // SSL check
+  // 1. SSL check
+  let sslValid = url.startsWith('https://')
+  let sslStatus = 0
   try {
-    const res = await fetch(`https://${hostname}`, { signal: AbortSignal.timeout(10000) })
-    results.checks.ssl = { valid: true, enforced: url.startsWith('https://'), status: res.status }
-  } catch (e: any) {
-    results.checks.ssl = { valid: url.startsWith('https://'), enforced: url.startsWith('https://'), error: e.message }
+    const res = await fetch(`https://${hostname}`, { signal: AbortSignal.timeout(8000) })
+    sslValid = true
+    sslStatus = res.status
+  } catch { sslValid = url.startsWith('https://') }
+
+  // 2. MX records — identify email provider
+  const mxRecords = await dnsLookup(hostname, 'MX')
+  const mxData = mxRecords.map((r: any) => (r.data || '').toLowerCase())
+  const mxFound = mxRecords.length > 0
+
+  // Detect provider from MX
+  let detectedProvider = 'Unknown'
+  let providerSelectors: string[] = []
+
+  if (mxData.some((m: string) => m.includes('zoho'))) {
+    detectedProvider = 'Zoho Mail'
+    providerSelectors = ['zoho', 'zmail', 'zohomail', 'zm1', 'zm2']
+  } else if (mxData.some((m: string) => m.includes('google') || m.includes('gmail') || m.includes('googlemail'))) {
+    detectedProvider = 'Google Workspace'
+    providerSelectors = ['google', 'googlemail', 's1', 's2', 'gm1']
+  } else if (mxData.some((m: string) => m.includes('outlook') || m.includes('microsoft') || m.includes('office365'))) {
+    detectedProvider = 'Microsoft 365'
+    providerSelectors = ['selector1', 'selector2', 'selector1-klaro-services', 'selector2-klaro-services']
+  } else if (mxData.some((m: string) => m.includes('amazonses') || m.includes('amazon'))) {
+    detectedProvider = 'Amazon SES'
+    providerSelectors = ['ses', 'amazonses', 'amazon', 'ses1', 'ses2']
+  } else if (mxData.some((m: string) => m.includes('mailgun'))) {
+    detectedProvider = 'Mailgun'
+    providerSelectors = ['mailo', 'pic', 'k1', 'k2', 'mg']
+  } else if (mxData.some((m: string) => m.includes('sendgrid'))) {
+    detectedProvider = 'SendGrid'
+    providerSelectors = ['s1', 's2', 'sg', 'sendgrid', 'smtpapi']
+  } else if (mxData.some((m: string) => m.includes('mailchimp') || m.includes('mandrill'))) {
+    detectedProvider = 'Mailchimp/Mandrill'
+    providerSelectors = ['mandrill', 'k1', 'k2', 'mc', 'mcsv']
+  } else if (mxData.some((m: string) => m.includes('mimecast'))) {
+    detectedProvider = 'Mimecast'
+    providerSelectors = ['mc1', 'mc2', 'mimecast', 'selector1', 'selector2']
+  } else if (mxData.some((m: string) => m.includes('proofpoint'))) {
+    detectedProvider = 'Proofpoint'
+    providerSelectors = ['pp1', 'pp2', 'proofpoint', 'selector1', 'selector2']
   }
 
-  // SPF
+  // Always try generic selectors too
+  const genericSelectors = ['default', 'dkim', 'mail', 'email', 'key1', 'key2', 'dkim1', 'dkim2', 'smtp', 'selector1', 'selector2', 'k1', 'k2', 's1', 's2', 'resend', 'brevo', 'sendinblue', 'postmark', 'pm']
+  const allSelectors = [...new Set([...providerSelectors, ...genericSelectors])]
+
+  // 3. SPF check
   const txtRecords = await dnsLookup(hostname, 'TXT')
   const spfRecord = txtRecords.find((r: any) => r.data?.includes('v=spf1'))
-  results.checks.spf = { found: !!spfRecord, record: spfRecord?.data || null, score: spfRecord ? 100 : 0 }
+  const spfFound = !!spfRecord
+  const spfRecord_val = spfRecord?.data || null
 
-  // DMARC
+  // 4. DMARC check
   const dmarcRecords = await dnsLookup(`_dmarc.${hostname}`, 'TXT')
   const dmarcRecord = dmarcRecords.find((r: any) => r.data?.includes('v=DMARC1'))
-  results.checks.dmarc = {
-    found: !!dmarcRecord, record: dmarcRecord?.data || null,
-    score: dmarcRecord ? 100 : 0,
-    policy: dmarcRecord?.data?.match(/p=(\w+)/)?.[1] || null
-  }
+  const dmarcFound = !!dmarcRecord
+  const dmarcPolicy = dmarcRecord?.data?.match(/p=(\w+)/)?.[1] || null
 
-  // DKIM — comprehensive selector list including Zoho, Google, Microsoft etc
-  const dkimSelectors = ['default', 'google', 'mail', 'dkim', 'k1', 'k2',
-    'zoho', 'zmail', 'smtp', 'email', 'mandrill', 'sendgrid', 'mailgun',
-    's1', 's2', 'key1', 'key2', 'selector1', 'selector2', 'mx', 'mxvault',
-    'protonmail', 'pm', 'mailchimp', 'brevo', 'sendinblue', 'postmark',
-    'amazonses', 'ses', 'resend', 'dkim1', 'dkim2', 'sig1']
+  // 5. DKIM — try provider-specific first, then generic
   let dkimFound = false
   let dkimSelector = ''
-  for (const selector of dkimSelectors) {
+  let dkimRecord = ''
+
+  for (const selector of allSelectors) {
     const records = await dnsLookup(`${selector}._domainkey.${hostname}`, 'TXT')
-    if (records.length > 0) { dkimFound = true; dkimSelector = selector; break }
-  }
-  results.checks.dkim = { found: dkimFound, selector: dkimSelector, score: dkimFound ? 100 : 0 }
-
-  // MX records
-  const mxRecords = await dnsLookup(hostname, 'MX')
-  results.checks.mx = {
-    found: mxRecords.length > 0,
-    records: mxRecords.slice(0, 3).map((r: any) => r.data),
-    score: mxRecords.length > 0 ? 100 : 0
+    if (records.length > 0 && records.some((r: any) => r.data?.includes('v=DKIM1') || r.data?.includes('p='))) {
+      dkimFound = true
+      dkimSelector = selector
+      dkimRecord = records[0]?.data?.slice(0, 100) || ''
+      break
+    }
   }
 
-  const emailScore = Math.round(
-    (results.checks.spf.score + results.checks.dmarc.score + results.checks.dkim.score) / 3
-  )
-  results.email_security_score = emailScore
+  // Also try with subdomain stripped (e.g. mail.domain.com → domain.com)
+  if (!dkimFound && hostname.split('.').length > 2) {
+    const rootDomain = hostname.split('.').slice(-2).join('.')
+    for (const selector of allSelectors.slice(0, 8)) {
+      const records = await dnsLookup(`${selector}._domainkey.${rootDomain}`, 'TXT')
+      if (records.length > 0 && records.some((r: any) => r.data?.includes('v=DKIM1') || r.data?.includes('p='))) {
+        dkimFound = true
+        dkimSelector = `${selector} (root domain)`
+        dkimRecord = records[0]?.data?.slice(0, 100) || ''
+        break
+      }
+    }
+  }
 
-  results.summary = {
-    ssl_valid: results.checks.ssl.valid,
-    spf_configured: results.checks.spf.found,
-    dmarc_configured: results.checks.dmarc.found,
-    dkim_configured: results.checks.dkim.found,
+  const emailScore = Math.round((
+    (spfFound ? 100 : 0) +
+    (dmarcFound ? 100 : 0) +
+    (dkimFound ? 100 : 0)
+  ) / 3)
+
+  const recommendations = [
+    !spfFound && 'Add SPF record: v=spf1 include:[yourprovider.com] ~all',
+    !dmarcFound && 'Add DMARC policy: _dmarc.' + hostname + ' → v=DMARC1; p=quarantine; rua=mailto:dmarc@' + hostname,
+    !dkimFound && `Configure DKIM in ${detectedProvider !== 'Unknown' ? detectedProvider : 'your email provider'} and add the DNS key they provide`,
+    dmarcFound && dmarcPolicy === 'none' && 'Strengthen DMARC from p=none to p=quarantine or p=reject',
+    spfFound && spfRecord_val?.includes('+all') && 'Your SPF record uses +all which is too permissive — change to ~all or -all',
+  ].filter(Boolean)
+
+  return NextResponse.json({
+    hostname,
+    email_provider: detectedProvider,
     email_security_score: emailScore,
-    recommendations: [
-      !results.checks.spf.found && 'Add SPF record to prevent email spoofing',
-      !results.checks.dmarc.found && 'Add DMARC policy to protect domain from phishing',
-      !results.checks.dkim.found && 'Configure DKIM signing for email authentication',
-      !results.checks.ssl.valid && 'Fix SSL certificate — site is not secure',
-      results.checks.dmarc.found && results.checks.dmarc.policy === 'none' && 'Strengthen DMARC from p=none to p=quarantine or p=reject',
-    ].filter(Boolean)
-  }
-
-  return NextResponse.json(results)
+    checks: {
+      ssl: { valid: sslValid, enforced: url.startsWith('https://'), status: sslStatus },
+      mx: { found: mxFound, records: mxData.slice(0, 3), provider: detectedProvider },
+      spf: { found: spfFound, record: spfRecord_val, score: spfFound ? 100 : 0 },
+      dmarc: { found: dmarcFound, record: dmarcRecord?.data || null, policy: dmarcPolicy, score: dmarcFound ? 100 : 0 },
+      dkim: { found: dkimFound, selector: dkimSelector, record: dkimRecord, score: dkimFound ? 100 : 0 },
+    },
+    summary: {
+      ssl_valid: sslValid,
+      spf_configured: spfFound,
+      dmarc_configured: dmarcFound,
+      dkim_configured: dkimFound,
+      email_security_score: emailScore,
+      recommendations,
+    }
+  })
 }

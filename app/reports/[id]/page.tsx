@@ -97,6 +97,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
   const dns = r.dns_security?.checks || {}
   const emailSecScore = r.dns_security?.email_security_score ?? 0
   const dnsRecs = r.dns_security?.summary?.recommendations || []
+  const emailProvider = r.dns_security?.email_provider || ''
   const week1 = r.roadmap_week_1 || {}
   const month1 = r.roadmap_month_1 || {}
   const month23 = r.roadmap_month_2_3 || {}
