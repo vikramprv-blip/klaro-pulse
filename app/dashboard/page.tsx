@@ -51,28 +51,31 @@ export default function Dashboard() {
     })
   }, [])
 
-  const loadScans = useCallback(async () => {
-    if (!user) return
+  const loadScans = useCallback(async (userId?: string) => {
+    const uid = userId || user?.id
+    if (!uid) return
     const { data: llmData } = await sb.from('pulse_scans')
-      .select('*').eq('user_id', user.id)
+      .select('*').eq('user_id', uid)
       .order('created_at', { ascending: false }).limit(100)
     const { data: lamData } = await sb.from('lam_runs')
-      .select('*').eq('user_id', user.id)
+      .select('*').eq('user_id', uid)
       .order('created_at', { ascending: false }).limit(50)
     setScans(llmData || [])
     setLamRuns(lamData || [])
-  }, [user])
-
-  useEffect(() => { if (user) loadScans() }, [user, loadScans])
+  }, [user?.id])
 
   useEffect(() => {
-    if (!user) return
+    if (user?.id) loadScans(user.id)
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
     const channel = sb.channel('pulse_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pulse_scans', filter: `user_id=eq.${user.id}` }, () => loadScans())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lam_runs', filter: `user_id=eq.${user.id}` }, () => loadScans())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pulse_scans', filter: `user_id=eq.${user.id}` }, () => loadScans(user.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lam_runs', filter: `user_id=eq.${user.id}` }, () => loadScans(user.id))
       .subscribe()
     return () => { sb.removeChannel(channel) }
-  }, [user, loadScans])
+  }, [user?.id])
 
   const plan = profile?.plan || 'trial'
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.trial
@@ -91,7 +94,6 @@ export default function Dashboard() {
     setScanStatus({ msg: `⏳ Scanning ${url}...`, type: 'scanning' })
     try {
       if (scanType === 'lam') {
-        // LAM → create row then trigger GitHub
         const res = await fetch('/api/pulse/trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -101,7 +103,6 @@ export default function Dashboard() {
         if (data.ok) setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
         else throw new Error(data.error || 'LAM trigger failed')
       } else {
-        // LLM → API route handles everything including DB insert
         setScanStatus({ msg: `⏳ Scanning ${url} — takes 30-60 seconds...`, type: 'scanning' })
         const res = await fetch('/api/pulse/scan', {
           method: 'POST',
@@ -118,7 +119,8 @@ export default function Dashboard() {
     }
     setScanning(false)
     setTimeout(() => setScanStatus(null), 10000)
-    loadScans()
+    // Load scans with explicit user id after delay
+    setTimeout(() => loadScans(user?.id), 1000)
   }
 
   async function cancelScan(scanId: string) {
@@ -127,7 +129,7 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_id: scanId })
     })
-    loadScans()
+    loadScans(user?.id)
   }
 
   async function handleScan() {
@@ -255,7 +257,7 @@ export default function Dashboard() {
               {mode === 'lam' && (
                 <div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                    🤖 AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
+                    🤖 AI visits your site as a real potential client. Full ADA, SOC & conversion audit. 8-12 min.
                   </div>
                   <div style={S.inputRow}>
                     <input style={S.urlInput} type="url" placeholder="https://yoursite.com" value={lamUrl}
