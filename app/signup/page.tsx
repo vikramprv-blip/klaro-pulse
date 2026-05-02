@@ -9,6 +9,7 @@ export default function SignUp() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const sb = createClient()
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault()
@@ -16,30 +17,29 @@ export default function SignUp() {
     if (password !== confirm) { setError('Passwords do not match'); return }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     setLoading(true)
-    const sb = createClient()
     const { data, error: signUpError } = await sb.auth.signUp({
       email, password,
       options: { emailRedirectTo: `${window.location.origin}/dashboard` }
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
-    // Create pulse_users row
+    // Create pulse_users row via API route (uses service role, bypasses RLS)
     if (data.user) {
-      await sb.from('pulse_users').upsert({
-        id: data.user.id,
-        email: data.user.email,
-        plan: 'trial',
-        trial_started_at: new Date().toISOString(),
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      })
+      try {
+        await fetch('/api/pulse/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: data.user.id, email: data.user.email })
+        })
+      } catch (e) { console.error('Profile create failed', e) }
     }
     setDone(true)
     setLoading(false)
   }
 
   if (done) return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.logo}>KLARO <span style={styles.accent}>PULSE</span></div>
+    <div style={S.page}>
+      <div style={S.card}>
+        <div style={S.logo}>KLARO <span style={S.accent}>PULSE</span></div>
         <div style={{ fontSize: '40px', margin: '20px 0' }}>✉️</div>
         <div style={{ fontSize: '18px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>Check your email</div>
         <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
@@ -47,50 +47,46 @@ export default function SignUp() {
           Click it to activate your 14-day free trial.
         </p>
         <p style={{ fontSize: '12px', color: '#334155', marginTop: '20px' }}>
-          Already confirmed? <a href="/signin" style={styles.link}>Sign in</a>
+          Already confirmed? <a href="/signin" style={S.link}>Sign in</a>
         </p>
       </div>
     </div>
   )
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.logo}>KLARO <span style={styles.accent}>PULSE</span></div>
-        <p style={styles.sub}>14-day free trial · No credit card needed</p>
-        <div style={styles.trialBox}>
+    <div style={S.page}>
+      <div style={S.card}>
+        <div style={S.logo}>KLARO <span style={S.accent}>PULSE</span></div>
+        <p style={S.sub}>14-day free trial · No credit card needed</p>
+        <div style={S.trialBox}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8', marginBottom: '6px' }}>TRIAL INCLUDES</div>
-          <div style={styles.trialItem}>✓ 1 full site report</div>
-          <div style={styles.trialItem}>✓ 1 competitor comparison</div>
-          <div style={styles.trialItem}>✓ UX, Security & ADA audit</div>
-          <div style={styles.trialItem}>✓ 90-day action roadmap</div>
+          <div style={S.trialItem}>✓ 1 full site report</div>
+          <div style={S.trialItem}>✓ 1 competitor comparison</div>
+          <div style={S.trialItem}>✓ UX, Security & ADA audit</div>
+          <div style={S.trialItem}>✓ 90-day action roadmap</div>
         </div>
-        <form onSubmit={handleSignUp} style={styles.form}>
-          <input style={styles.input} type="email" placeholder="Work email address" value={email}
+        <form onSubmit={handleSignUp} style={S.form}>
+          <input style={S.input} type="email" placeholder="Work email address" value={email}
             onChange={e => setEmail(e.target.value)} required autoComplete="email" />
-          <input style={styles.input} type="password" placeholder="Password (min 8 chars)" value={password}
+          <input style={S.input} type="password" placeholder="Password (min 8 chars)" value={password}
             onChange={e => setPassword(e.target.value)} required />
-          <input style={styles.input} type="password" placeholder="Confirm password" value={confirm}
+          <input style={S.input} type="password" placeholder="Confirm password" value={confirm}
             onChange={e => setConfirm(e.target.value)} required />
-          {error && <div style={styles.error}>{error}</div>}
-          <button style={styles.btn} type="submit" disabled={loading}>
+          {error && <div style={S.error}>{error}</div>}
+          <button style={S.btn} type="submit" disabled={loading}>
             {loading ? 'Creating account...' : 'Start Free Trial →'}
           </button>
         </form>
-        <p style={styles.foot}>
-          Already have an account? <a href="/signin" style={styles.link}>Sign in</a>
-        </p>
+        <p style={S.foot}>Already have an account? <a href="/signin" style={S.link}>Sign in</a></p>
         <p style={{ fontSize: '11px', color: '#1e2a3a', marginTop: '12px', lineHeight: 1.5 }}>
-          By signing up you agree to our{' '}
-          <a href="https://klaro.services/terms" style={styles.link}>Terms</a> and{' '}
-          <a href="https://klaro.services/privacy" style={styles.link}>Privacy Policy</a>
+          By signing up you agree to our <a href="https://klaro.services/terms" style={S.link}>Terms</a> and <a href="https://klaro.services/privacy" style={S.link}>Privacy Policy</a>
         </p>
       </div>
     </div>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const S: Record<string, React.CSSProperties> = {
   page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080c14', padding: '20px' },
   card: { width: '100%', maxWidth: '440px', background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '24px', padding: '40px', textAlign: 'center' },
   logo: { fontSize: '22px', fontWeight: 900, color: 'white', marginBottom: '4px', letterSpacing: '-0.5px' },
