@@ -129,6 +129,20 @@ export async function POST(req: NextRequest) {
       await setProgress(id, 35, 'Running AI analysis...')
     }
 
+    // Run DNS/SSL security check in parallel
+    let securityData: any = {}
+    try {
+      const secRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://klaro-pulse.vercel.app'}/api/pulse/security`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      securityData = await secRes.json()
+      console.log('Security check done, email score:', securityData.email_security_score)
+    } catch (e: any) {
+      console.error('Security check failed:', e.message)
+    }
+
     await setProgress(id, 55, 'Running AI audit...')
 
     const prompt = `You are a senior web consultant producing a professional site intelligence report for ${url}.
@@ -144,6 +158,12 @@ Testimonials: ${s.hasTestimonials} | Pricing visible: ${s.hasPricing} | CTA: ${s
 Images: ${s.imgs} total / ${s.imgsAlt} with alt text | Schema: ${s.hasSchema}
 Status: ${s.status} | Size: ${s.size} bytes
 Content: "${s.body.slice(0, 2000)}"
+DNS/EMAIL SECURITY:
+- SPF record: ${securityData.checks?.spf?.found ? 'Found: ' + (securityData.checks.spf.record || 'yes') : 'NOT FOUND'}
+- DMARC policy: ${securityData.checks?.dmarc?.found ? 'Found, policy=' + (securityData.checks.dmarc.policy || 'unknown') : 'NOT FOUND'}
+- DKIM configured: ${securityData.checks?.dkim?.found ? 'Yes' : 'No'}
+- Email security score: ${securityData.email_security_score ?? 'unknown'}/100
+- SSL valid: ${securityData.checks?.ssl?.valid ?? s.hasSSL}
 
 Return a JSON object with ALL these keys (no extras, no missing):
 {
@@ -215,7 +235,7 @@ Return a JSON object with ALL these keys (no extras, no missing):
       conversion_score: report.conversion_score || 0,
       security_score: report.security_score || 0,
       mobile_score: report.mobile_score || 0,
-      report, completed_at: new Date().toISOString()
+      report: { ...report, dns_security: securityData }, completed_at: new Date().toISOString()
     }).eq('id', id)
 
     return NextResponse.json({ ok: true, score: report.overall_score, scan_id: id })

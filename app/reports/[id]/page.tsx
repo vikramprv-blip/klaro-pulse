@@ -96,6 +96,9 @@ export default function ReportPage({ params }: { params: { id: string } }) {
   const gdprScore = r.gdpr_status_score ?? 50
   const complianceScore = r.overall_compliance_score ?? Math.round((httpsScore + mobileAdaScore + cookieScore + privacyScore) / 4)
   const riskLevel = r.compliance_risk_level || (complianceScore < 50 ? 'HIGH RISK' : complianceScore < 75 ? 'MEDIUM RISK' : 'LOW RISK')
+  const dns = r.dns_security?.checks || {}
+  const emailSecScore = r.dns_security?.email_security_score ?? 0
+  const dnsRecs = r.dns_security?.summary?.recommendations || []
   const legalRisks = r.legal_risks || []
   const securityIssues = r.security_issues || []
   const complianceRecs = r.compliance_recommendations || []
@@ -343,6 +346,30 @@ export default function ReportPage({ params }: { params: { id: string } }) {
             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>ADA compliance failures expose US businesses to lawsuit risk.</div>
           </div>
         </div>
+
+        {/* DNS & Email Security */}
+        {r.dns_security && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '12px' }}>📧 DNS & EMAIL SECURITY</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '12px' }}>
+              {[
+                ['SPF', dns.spf?.found, dns.spf?.found ? 'Configured' : 'Missing'],
+                ['DMARC', dns.dmarc?.found, dns.dmarc?.found ? `Policy: ${dns.dmarc?.policy || 'set'}` : 'Missing'],
+                ['DKIM', dns.dkim?.found, dns.dkim?.found ? 'Configured' : 'Missing'],
+                ['Email Score', emailSecScore >= 70, `${emailSecScore}/100`],
+              ].map(([label, good, status]) => (
+                <div key={label as string} style={{ background: '#0f1420', border: '1px solid #1e2a3a', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: good ? '#4ade80' : '#f87171', marginBottom: '4px' }}>{good ? '✓' : '✗'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{label as string}</div>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>{status as string}</div>
+                </div>
+              ))}
+            </div>
+            {dnsRecs.length > 0 && dnsRecs.map((rec: string, i: number) => (
+              <div key={i} style={{ fontSize: '12px', color: '#f87171', padding: '6px 0', borderBottom: '1px solid #0d1520' }}>⚠ {rec}</div>
+            ))}
+          </div>
+        )}
 
         {legalRisks.length > 0 && (
           <div style={{ marginBottom: '16px' }}>

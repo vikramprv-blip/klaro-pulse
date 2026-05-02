@@ -135,13 +135,13 @@ export default function Dashboard() {
       setActiveScanId('pending')
       await loadScans()
       await triggerScan(url, 'llm')
-    } else if (mode === 'compare') {
+    } else if (mode === 'compare') { window.location.href = '/compare'; return;
       const urls = compareUrls.filter(u => u.startsWith('http'))
       if (urls.length < 2) { setScanStatus({ msg: 'Enter at least 2 valid URLs', type: 'error' }); return }
       setActiveScanId('pending')
       for (const u of urls) await triggerScan(u, 'compare')
       setActiveScanId(null)
-    } else if (mode === 'bulk') {
+    } else if (mode === 'bulk') { window.location.href = '/bulk'; return;
       const urls = bulkText.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'))
       if (!urls.length) { setScanStatus({ msg: 'Enter at least 1 URL per line', type: 'error' }); return }
       setActiveScanId('pending')
@@ -221,9 +221,13 @@ export default function Dashboard() {
             <div style={S.scanBarTitle}>🔍 Scan any website</div>
             <div style={S.tabs}>
               {(['llm', 'compare', 'bulk', 'lam'] as const).map(m => (
-                <button key={m} onClick={() => setMode(m)}
+                <button key={m} onClick={() => {
+                  if (m === 'compare') { window.location.href = '/compare'; return }
+                  if (m === 'bulk') { window.location.href = '/bulk'; return }
+                  setMode(m)
+                }}
                   style={{ ...S.tab, ...(mode === m ? S.tabActive : {}), ...(isLocked(m) ? S.tabLocked : {}) }}>
-                  {m === 'llm' ? 'Single Site' : m === 'compare' ? 'Compare' : m === 'bulk' ? 'Bulk' : 'LAM Audit'}
+                  {m === 'llm' ? 'Single Site' : m === 'compare' ? 'Compare ↗' : m === 'bulk' ? 'Bulk ↗' : 'LAM Audit'}
                   {isLocked(m) && ' 🔒'}
                 </button>
               ))}
