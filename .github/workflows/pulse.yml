@@ -11,7 +11,7 @@ on:
         required: false
         default: 'standard'
       lam_run_id:
-        description: 'LAM run ID from lam_runs table'
+        description: 'LAM run ID'
         required: false
         default: ''
       user_id:
@@ -29,13 +29,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install Playwright
+      - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install browser-use==0.12.6
+          pip install browser-use
           pip install langchain-groq langchain-openai langchain-google-genai
           pip install playwright python-dotenv supabase
           python -m playwright install chromium --with-deps
+          pip show browser-use | grep Version
       - name: Run scan
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -43,7 +44,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LAM_USER_ID: ${{ github.event.inputs.user_id }}
@@ -53,11 +53,7 @@ jobs:
           MODE="${{ github.event.inputs.scan_mode }}"
           echo "Mode: $MODE | Target: $TARGET"
           if [ "$MODE" = "lam" ] && [ -n "$TARGET" ]; then
-            echo "Starting LAM audit: $TARGET"
             python3 agents/lam-agent.py "$TARGET"
           elif [ -n "$TARGET" ]; then
-            echo "Standard scan: $TARGET"
             python3 agents/lam-agent.py "$TARGET"
-          else
-            echo "No target specified"
           fi
