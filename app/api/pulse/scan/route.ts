@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   )
-  const { data: { user } } = await auth.getUser()
+  const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { url } = await req.json()
@@ -85,7 +85,7 @@ Page content: ${body}
 Return ONLY JSON with: overall_score, trust_score, conversion_score, security_score, mobile_score (all 0-100 integers), grade (A-F), industry, novice_summary, one_line_verdict, competitor_advantage, ux_friction_points (array), resolution_steps (array), revenue_opportunities (array), strengths (array), mobile_readiness, pricing_clarity, cta_effectiveness, target_audience_clarity, revenue_impact`)
 
     await svc.from('pulse_scans').update({
-      status: 'complete', progress: 100, progress_message: 'Complete ✓',
+      status: 'complete', progress: 100, progress_message: 'Complete',
       overall_score: report.overall_score || 0,
       trust_score: report.trust_score || 0,
       conversion_score: report.conversion_score || 0,
