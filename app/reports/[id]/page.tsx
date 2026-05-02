@@ -116,10 +116,11 @@ export default function ReportPage({ params }: { params: { id: string } }) {
     </div>
   )
 
+  const scoreColor = (v: number) => v >= 75 ? 'green' : v >= 50 ? 'amber' : 'red'
   const scoreBox = (label: string, val: number) => (
-    <div style={{ background: scBg(val), border: `1px solid ${scBorder(val)}`, borderRadius: '10px', padding: '14px', textAlign: 'center' as const }}>
-      <div style={{ fontSize: '30px', fontWeight: 900, color: sc(val), lineHeight: 1 }}>{val || '—'}</div>
-      <div style={{ fontSize: '10px', color: '#475569', textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginTop: '5px', fontWeight: 600 }}>{label}</div>
+    <div data-card data-score={scoreColor(val)} style={{ background: scBg(val), border: `1px solid ${scBorder(val)}`, borderRadius: '10px', padding: '14px', textAlign: 'center' as const }}>
+      <div data-text-heading style={{ fontSize: '30px', fontWeight: 900, color: sc(val), lineHeight: 1 }}>{val || '—'}</div>
+      <div data-text-dim style={{ fontSize: '10px', color: '#475569', textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginTop: '5px', fontWeight: 600 }}>{label}</div>
     </div>
   )
 
@@ -234,7 +235,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
           <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.8, marginBottom: '16px' }}>{summary}</div>
         )}
         {revenueImpact && (
-          <div style={{ background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: C.red }}>
+          <div data-impact style={{ background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: C.red }}>
             💰 <strong>Revenue Impact:</strong> {revenueImpact}
           </div>
         )}
@@ -243,7 +244,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
           <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '12px' }}>TOP 3 IMMEDIATE ACTIONS</div>
           {[['THIS WEEK', weekAction, C.red], ['THIS MONTH', monthAction, C.yellow], ['THIS QUARTER', quarterAction, C.green]].map(([label, val, color]) => val ? (
             <div key={label} style={{ display: 'flex', gap: '12px', padding: '9px 0', borderBottom: `1px solid ${C.borderDim}`, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color, whiteSpace: 'nowrap', marginTop: '2px', minWidth: '80px' }}>{label}</span>
+              <span data-action-label style={{ fontSize: '10px', fontWeight: 700, color, whiteSpace: 'nowrap', marginTop: '2px', minWidth: '80px' }}>{label}</span>
               <span style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>{val}</span>
             </div>
           ) : null)}
@@ -290,15 +291,15 @@ export default function ReportPage({ params }: { params: { id: string } }) {
             <div style={{ fontSize: '11px', fontWeight: 700, color: C.red, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '8px' }}>🔴 PROBLEMS FOUND</div>
             {frictionPoints.length === 0 ? <div style={{ fontSize: '12px', color: '#334155' }}>No issues detected</div> :
               frictionPoints.map((p: string, i: number) => (
-                <div key={i} style={{ fontSize: '11px', color: '#64748b', background: C.card, border: `1px solid ${C.border}`, borderRadius: '7px', padding: '9px', marginBottom: '7px', lineHeight: 1.5 }}>⚠ {p}</div>
+                <div data-problem key={i} style={{ fontSize: '11px', color: '#64748b', background: C.card, border: `1px solid ${C.border}`, borderRadius: '7px', padding: '9px', marginBottom: '7px', lineHeight: 1.5 }}>⚠ {p}</div>
               ))}
           </div>
           <div>
             <div style={{ fontSize: '11px', fontWeight: 700, color: C.green, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '8px' }}>🟢 HOW TO FIX</div>
             {resolutionSteps.length === 0 ? <div style={{ fontSize: '12px', color: '#334155' }}>—</div> :
               resolutionSteps.map((p: string, i: number) => (
-                <div key={i} style={{ fontSize: '11px', color: '#64748b', background: C.card, border: `1px solid ${C.border}`, borderRadius: '7px', padding: '9px', marginBottom: '7px', lineHeight: 1.5 }}>
-                  <span style={{ color: C.green, fontWeight: 700 }}>0{i+1}</span> {p}
+                <div data-fix key={i} style={{ fontSize: '11px', color: '#64748b', background: C.card, border: `1px solid ${C.border}`, borderRadius: '7px', padding: '9px', marginBottom: '7px', lineHeight: 1.5 }}>
+                  <span data-fix-num style={{ color: C.green, fontWeight: 700 }}>0{i+1}</span> {p}
                 </div>
               ))}
           </div>
@@ -343,7 +344,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
         </div>
 
         {r.opportunity_to_win && (
-          <div style={{ background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: '10px', padding: '16px', marginBottom: '18px' }}>
+          <div data-opportunity style={{ background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: '10px', padding: '16px', marginBottom: '18px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: C.green, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '6px' }}>Your Opportunity To Win</div>
             <div style={{ fontSize: '12px', color: C.greenText, lineHeight: 1.7 }}>{r.opportunity_to_win}</div>
           </div>
@@ -394,7 +395,7 @@ export default function ReportPage({ params }: { params: { id: string } }) {
           ))}
         </div>
 
-        <div style={{ background: scBg(complianceScore), border: `2px solid ${scBorder(complianceScore)}`, borderRadius: '10px', padding: '14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div data-risk style={{ background: scBg(complianceScore), border: `2px solid ${scBorder(complianceScore)}`, borderRadius: '10px', padding: '14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ fontSize: '36px', fontWeight: 900, color: sc(complianceScore) }}>{complianceScore}</div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>ADA / WCAG 2.1 ACCESSIBILITY AUDIT</div>
