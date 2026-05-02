@@ -115,10 +115,10 @@ export default function ReportPage({ params }: { params: { id: string } }) {
   return (
     <>
       <style>{`
-        @media print {
+        @media print {n          html, body { background: #080c14 !important; color: #94a3b8 !important; }
           .no-print { display: none !important; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { background: #080c14 !important; }
+          body { background: white !important; color: #1e293b !important; }n          .report-page { background: white !important; }n          div[style] { background-color: transparent !important; }n          div { background-color: inherit; }
         }
         @page { margin: 0; size: A4; }
         body { margin: 0; background: #080c14; }
