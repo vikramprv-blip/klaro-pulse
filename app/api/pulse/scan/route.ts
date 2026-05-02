@@ -242,6 +242,10 @@ Return a JSON object with ALL these keys (no extras, no missing):
     await svc.from('pulse_scans').update({
       status: 'complete', progress: 100, progress_message: 'Complete ✓',
       overall_score: report.overall_score || 0,
+      baseline_score: lockedScores ? lockedScores.overall_score : (report.overall_score || 0),
+      baseline_grade: lockedScores ? lockedScores.grade : (report.grade || '—'),
+      score_delta: lockedScores ? (report.overall_score || 0) - lockedScores.overall_score : 0,
+      is_baseline: !lockedScores,
       trust_score: report.trust_score || 0,
       conversion_score: report.conversion_score || 0,
       security_score: report.security_score || 0,
