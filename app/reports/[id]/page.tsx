@@ -138,6 +138,56 @@ export default function ReportPage({ params }: { params: { id: string } }) {
         }
         @page { margin: 0; size: A4; }
         body { margin: 0; background: #080c14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+        @media print {
+          body, div { background-color: white !important; color: #1e293b !important; }
+          body { background: white !important; }
+
+          /* Score boxes — light */
+          div[style*="052e16"], div[style*="1c1505"], div[style*="1c0505"] {
+            background: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+          }
+
+          /* Cards */
+          div[style*="0f1420"], div[style*="080c14"], div[style*="0a0f1a"],
+          div[style*="0a0d18"], div[style*="0c1a3a"] {
+            background: white !important;
+            border-color: #e2e8f0 !important;
+          }
+
+          /* Text colors — make readable on white */
+          div[style*="color: #94a3b8"], div[style*="color: #64748b"],
+          div[style*="color: #475569"], div[style*="color: #334155"] {
+            color: #374151 !important;
+          }
+          div[style*="color: white"], div[style*='color: "white"'] {
+            color: #111827 !important;
+          }
+
+          /* Score colors stay — green/yellow/red are fine on white */
+          /* Border separators */
+          div[style*="1e2a3a"], div[style*="0d1520"] {
+            border-color: #e2e8f0 !important;
+          }
+
+          /* Green opportunity box */
+          div[style*="052e16"] { background: #f0fdf4 !important; border-color: #bbf7d0 !important; }
+          div[style*="86efac"] { color: #166534 !important; }
+
+          /* Red revenue impact box */
+          div[style*="1c0505"] { background: #fef2f2 !important; border-color: #fecaca !important; }
+
+          /* Blue box */
+          div[style*="0c1a3a"] { background: #eff6ff !important; border-color: #bfdbfe !important; }
+          div[style*="818cf8"] { color: #4f46e5 !important; }
+
+          /* Page header line */
+          div[style*="border-bottom: 2px solid"] { border-bottom-color: #1e293b !important; }
+
+          /* Footer */
+          div[style*="border-top: 1px solid #1e2a3a"] { border-top-color: #e2e8f0 !important; }
+        }
       `}</style>
 
       {/* Topbar */}
