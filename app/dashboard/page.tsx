@@ -474,7 +474,7 @@ export default function Dashboard() {
                     <div style={S.cardActions}>
                       <button style={S.ghostBtn} onClick={() => toggleCard(item.id)}>{isExpanded ? '▲ Hide details' : '▼ View full analysis'}</button>
                       {isLam && <a href={`/reports/lam/${item.id}`} style={{ ...S.ghostBtn, textDecoration: 'none', display: 'inline-block' }}>📄 Full LAM Report</a>}
-                      <button style={S.ghostBtn} onClick={() => triggerScan(item.url, isLam ? 'lam' : 'llm')}>↺ Re-scan</button>
+                      <a href={`/reports/${item.id}`} style={{ ...S.ghostBtn, textDecoration: 'none', display: 'inline-block' }}>📄 Full Report</a>n                      <button style={S.ghostBtn} onClick={() => triggerScan(item.url, isLam ? 'lam' : 'llm')}>↺ Re-scan</button>
                     </div>
                   </>
                 )}
