@@ -12,6 +12,6 @@ RUN pip install --no-cache-dir \
     supabase \
     python-dotenv
 
-COPY lam-agent-v5.py .
+COPY lam-agent-v6.py .
 
-ENTRYPOINT ["python3", "lam-agent-v5.py"]
+ENTRYPOINT ["python3", "lam-agent-v6.py"]
