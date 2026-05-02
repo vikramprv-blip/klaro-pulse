@@ -35,10 +35,10 @@ export default function ReportPage({ params }: { params: { id: string } }) {
 
   const r = scan.report || {}
   const score = scan.overall_score || 0
-  const name = (() => { try { return new URL(scan.url).hostname } catch { return scan.url } })()
+  const name = scan.report?.company_name || (() => { try { return new URL(scan.url).hostname } catch { return scan.url } })()
   const date = new Date(scan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  function downloadPDF() {
+  function downloadPDF() {n    document.title = `Klaro Pulse Report — ${name}`
     window.print()
   }
 
