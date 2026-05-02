@@ -21,24 +21,17 @@ on:
 
 jobs:
   scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 45
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.44.0-jammy
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install playwright==1.44.0 groq openai requests python-dotenv supabase
-
-      - name: Install Playwright browsers
-        run: python -m playwright install chromium --with-deps
+          pip install --no-cache-dir groq openai requests python-dotenv supabase
 
       - name: Run LAM v6
         env:
