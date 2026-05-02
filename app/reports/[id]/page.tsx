@@ -343,24 +343,88 @@ export default function ReportPage({ params }: { params: { id: string } }) {
         {/* DNS section */}
         {r.dns_security && (
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '10px' }}>📧 DNS & EMAIL SECURITY</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>📧 DNS & EMAIL SECURITY</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: emailSecScore >= 70 ? '#16a34a' : emailSecScore >= 40 ? '#d97706' : '#dc2626', background: emailSecScore >= 70 ? '#f0fdf4' : emailSecScore >= 40 ? '#fffbeb' : '#fef2f2', border: `1px solid ${emailSecScore >= 70 ? '#bbf7d0' : emailSecScore >= 40 ? '#fde68a' : '#fecaca'}`, borderRadius: '20px', padding: '3px 10px' }}>
+                Email Security Score: {emailSecScore}/100
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', lineHeight: 1.6 }}>
+              These checks verify that your domain is protected against email spoofing and phishing attacks. Without them, anyone on the internet can send emails pretending to be from your domain — putting your clients and reputation at serious risk.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '12px' }}>
               {[
-                ['SPF', dns.spf?.found, dns.spf?.found ? 'Configured' : 'Missing'],
-                ['DMARC', dns.dmarc?.found, dns.dmarc?.found ? `Policy: ${dns.dmarc?.policy || 'set'}` : 'Missing'],
-                ['DKIM', dns.dkim?.found, dns.dkim?.found ? 'Configured' : 'Missing'],
-                ['Email Score', emailSecScore >= 70, `${emailSecScore}/100`],
-              ].map(([label, good, status]) => (
-                <div key={label as string} style={{ background: good ? '#f0fdf4' : '#fef2f2', border: `1px solid ${good ? '#bbf7d0' : '#fecaca'}`, borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}>
-                  <div style={{ fontSize: '18px', color: good ? '#16a34a' : '#dc2626' }}>{good ? '✓' : '✗'}</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', margin: '2px 0' }}>{label as string}</div>
-                  <div style={{ fontSize: '10px', color: '#6b7280' }}>{status as string}</div>
+                {
+                  label: 'SPF Record',
+                  found: dns.spf?.found,
+                  what: 'Tells email servers which servers are allowed to send email on your behalf.',
+                  risk: 'Without SPF, anyone can send emails pretending to be from your domain.',
+                  fix: 'Add a TXT record to your DNS: v=spf1 include:yourprovider.com ~all',
+                  time: '15 minutes',
+                  severity: 'Critical',
+                  record: dns.spf?.record,
+                },
+                {
+                  label: 'DMARC Policy',
+                  found: dns.dmarc?.found,
+                  policy: dns.dmarc?.policy,
+                  what: 'Tells receiving servers what to do with emails that fail SPF/DKIM checks.',
+                  risk: 'Without DMARC, spoofed emails from your domain reach client inboxes unblocked.',
+                  fix: 'Add TXT record: _dmarc.yourdomain.com → v=DMARC1; p=quarantine; rua=mailto:you@yourdomain.com',
+                  time: '20 minutes',
+                  severity: 'Critical',
+                },
+                {
+                  label: 'DKIM Signing',
+                  found: dns.dkim?.found,
+                  what: 'Adds a digital signature to every email so recipients can verify it really came from you.',
+                  risk: 'Without DKIM, your emails are more likely to land in spam and easier to forge.',
+                  fix: 'Enable DKIM in your email provider (Zoho, Google Workspace, etc.) and add the DNS key they provide.',
+                  time: '30 minutes',
+                  severity: 'High',
+                },
+              ].map(({ label, found, what, risk, fix, time, severity, record, policy }) => (
+                <div key={label} style={{ background: found ? '#f0fdf4' : '#fef2f2', border: `1px solid ${found ? '#bbf7d0' : '#fecaca'}`, borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 12px', background: found ? '#dcfce7' : '#fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: found ? '#166534' : '#991b1b' }}>
+                      {found ? '✓' : '✗'} {label}
+                    </div>
+                    {!found && <div style={{ fontSize: '9px', fontWeight: 700, color: '#dc2626', background: '#fecaca', borderRadius: '4px', padding: '2px 6px' }}>{severity}</div>}
+                    {found && policy && <div style={{ fontSize: '10px', color: '#166534', fontWeight: 600 }}>Policy: {policy}</div>}
+                    {found && !policy && <div style={{ fontSize: '10px', color: '#166534', fontWeight: 600 }}>Active</div>}
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: '11px', color: '#374151', marginBottom: '6px', lineHeight: 1.5 }}><strong>What it does:</strong> {what}</div>
+                    {!found && (
+                      <>
+                        <div style={{ fontSize: '11px', color: '#991b1b', marginBottom: '6px', lineHeight: 1.5 }}><strong>Risk:</strong> {risk}</div>
+                        <div style={{ fontSize: '11px', color: '#374151', marginBottom: '4px', lineHeight: 1.5 }}><strong>How to fix:</strong> {fix}</div>
+                        <div style={{ fontSize: '10px', color: '#6b7280', fontStyle: 'italic' }}>⏱ Estimated time: {time}</div>
+                      </>
+                    )}
+                    {found && record && (
+                      <div style={{ fontSize: '10px', color: '#6b7280', fontFamily: 'monospace', background: '#f0fdf4', padding: '4px 6px', borderRadius: '4px', wordBreak: 'break-all' as const }}>{record.slice(0, 80)}{record.length > 80 ? '...' : ''}</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            {dnsRecs.map((rec: string, i: number) => (
-              <div key={i} style={{ fontSize: '11px', color: '#991b1b', padding: '5px 0', borderBottom: '1px solid #fee2e2' }}>⚠ {rec}</div>
-            ))}
+            {!dns.spf?.found && !dns.dmarc?.found && !dns.dkim?.found && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderLeft: '4px solid #dc2626', borderRadius: '8px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b', marginBottom: '4px' }}>⚠ Critical: Your domain has no email authentication</div>
+                <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.6 }}>
+                  Your domain is currently unprotected. Cybercriminals can send phishing emails to your clients pretending to be from you — this is one of the most common causes of business fraud. All three records (SPF, DMARC, DKIM) should be configured immediately. Cost: Free. Time: Under 1 hour with your IT team or email provider.
+                </div>
+              </div>
+            )}
+            {(dns.spf?.found || dns.dmarc?.found || dns.dkim?.found) && emailSecScore < 100 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #d97706', borderRadius: '8px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>⚠ Partial email protection — complete your setup</div>
+                <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.6 }}>
+                  Some email security is configured but not complete. Complete all three records for full protection against email spoofing and to improve email deliverability.
+                </div>
+              </div>
+            )}
           </div>
         )}
 
