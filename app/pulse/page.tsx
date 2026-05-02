@@ -25,8 +25,25 @@ export default function PulsePage() {
     setScanned(true)
   }
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Klaro Pulse",
+    "applicationCategory": "BusinessApplication",
+    "description": "AI-powered website intelligence tool. Scans any public website for UX, conversion, security, ADA compliance and DNS health in 30 seconds.",
+    "url": "https://klaro.services/pulse",
+    "offers": [
+      { "@type": "Offer", "name": "Single Report", "price": "59.99", "priceCurrency": "USD" },
+      { "@type": "Offer", "name": "Starter", "price": "149", "priceCurrency": "USD", "billingIncrement": "P1M" },
+      { "@type": "Offer", "name": "Growth", "price": "399", "priceCurrency": "USD", "billingIncrement": "P1M" },
+      { "@type": "Offer", "name": "Agency", "price": "599", "priceCurrency": "USD", "billingIncrement": "P1M" }
+    ],
+    "creator": { "@type": "Organization", "name": "Klaro Global", "url": "https://klaro.services" }
+  }
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: W, color: T1 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #e2e8f0', padding: '0 40px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -286,27 +303,54 @@ export default function PulsePage() {
         </div>
       </section>
 
-      {/* Enterprise */}
+      {/* How it works */}
       <section style={{ padding: '80px 40px', background: T1 }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>ENTERPRISE & SELF-HOSTED</div>
-          <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '16px' }}>Need LAM inside your own infrastructure?</h2>
-          <p style={{ fontSize: '16px', color: T3, maxWidth: '560px', margin: '0 auto 40px', lineHeight: 1.7 }}>
-            For EU/US enterprises requiring SOC 1/2/3 continuous monitoring running within your own backend. Full implementation by our team.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '600px', margin: '0 auto 32px', textAlign: 'left' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>HOW IT WORKS</div>
+            <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '12px' }}>Four steps from URL to full AI audit report</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '60px' }}>
             {[
-              { title: 'LAM Setup & Installation', price: '$4,999 one-time', desc: 'Full implementation into your infrastructure' },
-              { title: 'CPA Reseller Program', price: 'Revenue Share', desc: 'Offer LAM audits to your clients under your brand' },
-            ].map(({ title, price, desc }) => (
-              <div key={title} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: IC, marginBottom: '6px' }}>{title}</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: W, marginBottom: '4px' }}>{price}</div>
-                <div style={{ fontSize: '12px', color: T3 }}>{desc}</div>
+              { n: '1', title: 'Paste any URL', desc: 'Any public website — a competitor, a client, a law firm, a SaaS product. No setup, no login to the target site.' },
+              { n: '2', title: 'AI scans everything', desc: 'Our agent browses the site like a human. AI analyses UX, trust, conversion, compliance, DNS security and performance.' },
+              { n: '3', title: 'Plain English report', desc: 'No jargon. No WCAG numbers. Just: here is the problem, here is the money you are losing, here is how to fix it.' },
+              { n: '4', title: 'Share with clients', desc: 'One click to generate a shareable PDF. Send it to your prospect before the meeting. They'll be impressed before you arrive.' },
+            ].map(({ n, title, desc }) => (
+              <div key={n} style={{ background: '#0f1a2e', border: '1px solid #1e3a5f', borderRadius: '16px', padding: '24px', position: 'relative' }}>
+                <div style={{ width: '32px', height: '32px', background: I, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: W, marginBottom: '16px' }}>{n}</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: W, marginBottom: '8px' }}>{title}</div>
+                <div style={{ fontSize: '13px', color: T3, lineHeight: 1.6 }}>{desc}</div>
               </div>
             ))}
           </div>
-          <a href="mailto:ops@klaro.services?subject=Enterprise Enquiry" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Talk to Us →</a>
+
+          {/* Enterprise */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: IC, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>ENTERPRISE & SELF-HOSTED</div>
+            <h2 style={{ fontSize: '36px', fontWeight: 900, color: W, marginBottom: '16px' }}>Need LAM inside your own infrastructure?</h2>
+            <p style={{ fontSize: '16px', color: T3, maxWidth: '560px', margin: '0 auto 32px', lineHeight: 1.7 }}>
+              For EU/US enterprises requiring SOC 1/2/3 continuous monitoring running within your own backend. Full implementation by our team.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '32px' }}>
+            {[
+              { title: 'LAM Setup & Installation', price: '$4,999', period: 'one-time', desc: 'Full LAM implementation into your own infrastructure. Your servers, your data.' },
+              { title: 'Continuous SOC Monitoring', price: '$1,299', period: '/month', desc: 'Weekly automated compliance checks. Evidence collection. Audit-ready reports.' },
+              { title: 'LAM + SOC Bundle', price: '$7,999 + $1,299', period: '/month', desc: 'Full installation plus ongoing monitoring. Best value for compliance-heavy firms.' },
+              { title: 'CPA Reseller Program', price: '40%', period: 'revenue share', desc: 'Offer LAM audits to your clients under your brand. We handle the tech.' },
+            ].map(({ title, price, period, desc }) => (
+              <div key={title} style={{ background: '#0f1a2e', border: '1px solid #1e3a5f', borderRadius: '14px', padding: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: IC, marginBottom: '8px' }}>{title}</div>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: W, marginBottom: '2px', lineHeight: 1.1 }}>{price}</div>
+                <div style={{ fontSize: '11px', color: T3, marginBottom: '10px', fontStyle: 'italic' }}>{period}</div>
+                <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <a href="mailto:ops@klaro.services?subject=Enterprise Enquiry" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${I}, ${IC})`, color: W, borderRadius: '10px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Talk to Us →</a>
+          </div>
         </div>
       </section>
 
