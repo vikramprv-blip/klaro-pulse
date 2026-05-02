@@ -18,6 +18,7 @@ on:
         description: 'User ID'
         required: false
         default: ''
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -25,23 +26,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install browser-use
-          pip install langchain-groq langchain-openai langchain-google-genai
-          pip install playwright python-dotenv supabase
+          pip install playwright==1.44.0 groq openai requests python-dotenv supabase
           python -m playwright install chromium --with-deps
-          pip show browser-use | grep Version
-      - name: Run scan
+
+      - name: Run LAM v6
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
           SUPABASE_URL: https://chwyrdublpuavcmjendw.supabase.co
@@ -52,8 +51,8 @@ jobs:
           TARGET="${{ github.event.inputs.target_url }}"
           MODE="${{ github.event.inputs.scan_mode }}"
           echo "Mode: $MODE | Target: $TARGET"
-          if [ "$MODE" = "lam" ] && [ -n "$TARGET" ]; then
-            python3 agents/lam-agent.py "$TARGET"
-          elif [ -n "$TARGET" ]; then
-            python3 agents/lam-agent.py "$TARGET"
+          if [ -n "$TARGET" ]; then
+            python3 agents/lam-agent-v6.py "$TARGET"
+          else
+            echo "No target URL provided"
           fi
