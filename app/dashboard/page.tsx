@@ -14,7 +14,7 @@ const PLAN_LIMITS: Record<string, any> = {
 }
 
 function sc(s: number) { return s >= 75 ? '#4ade80' : s >= 50 ? '#fbbf24' : '#f87171' }
-function scBorder(s: number) { return s >= 75 ? '#166534' : s >= 50 ? '#92400e' : '#991b1b' }
+function scBorder(s: number) { return s >= 75 ? '#166634' : s >= 50 ? '#92400e' : '#991b1b' }
 function ago(ts: string) {
   if (!ts) return '—'
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
@@ -42,37 +42,29 @@ export default function Dashboard() {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const sb = createClient()
 
+  const loadScans = useCallback(async () => {
+    const res = await fetch('/api/pulse/reports')
+    if (!res.ok) return
+    const data = await res.json()
+    setScans(data.scans || [])
+    setLamRuns(data.lam || [])
+  }, [])
+
   useEffect(() => {
     getUserProfile().then(p => {
       if (!p) { window.location.href = '/signin'; return }
       setUser({ id: p.id, email: p.email })
       setProfile(p)
       setProfileLoaded(true)
+      loadScans()
     })
   }, [])
-
-  const loadScans = useCallback(async (userId?: string) => {
-    const uid = userId || user?.id
-    if (!uid) return
-    const { data: llmData } = await sb.from('pulse_scans')
-      .select('*').eq('user_id', uid)
-      .order('created_at', { ascending: false }).limit(100)
-    const { data: lamData } = await sb.from('lam_runs')
-      .select('*').eq('user_id', uid)
-      .order('created_at', { ascending: false }).limit(50)
-    setScans(llmData || [])
-    setLamRuns(lamData || [])
-  }, [user?.id])
-
-  useEffect(() => {
-    if (user?.id) loadScans(user.id)
-  }, [user?.id])
 
   useEffect(() => {
     if (!user?.id) return
     const channel = sb.channel('pulse_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pulse_scans', filter: `user_id=eq.${user.id}` }, () => loadScans(user.id))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lam_runs', filter: `user_id=eq.${user.id}` }, () => loadScans(user.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pulse_scans' }, () => loadScans())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lam_runs' }, () => loadScans())
       .subscribe()
     return () => { sb.removeChannel(channel) }
   }, [user?.id])
@@ -119,8 +111,7 @@ export default function Dashboard() {
     }
     setScanning(false)
     setTimeout(() => setScanStatus(null), 10000)
-    // Load scans with explicit user id after delay
-    setTimeout(() => loadScans(user?.id), 1000)
+    setTimeout(() => loadScans(), 500)
   }
 
   async function cancelScan(scanId: string) {
@@ -129,7 +120,7 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_id: scanId })
     })
-    loadScans(user?.id)
+    loadScans()
   }
 
   async function handleScan() {
@@ -201,7 +192,7 @@ export default function Dashboard() {
       <div style={S.main}>
         <div style={S.scanBar}>
           <div style={S.scanBarTop}>
-            <div style={S.scanBarTitle}>🔍 Scan any website</div>
+            <div style={S.scanBarTitle}>�� Scan any website</div>
             <div style={S.tabs}>
               {(['llm', 'compare', 'bulk', 'lam'] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
@@ -212,7 +203,6 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-
           {isLocked(mode) ? (
             <div style={S.upgradeBox}>
               <div style={{ fontWeight: 700, color: 'white', marginBottom: '6px' }}>
@@ -295,9 +285,8 @@ export default function Dashboard() {
 
         <div style={S.filterRow}>
           <span style={S.filterLabel}>Filter:</span>
-          {[['all', 'All'], ['strong', 'Strong (75+)'], ['needs', 'Needs Work'], ['critical', 'Critical (<50)'], ['error', 'Errors'], ['lam', 'LAM Only']].map(([val, label]) => (
-            <button key={val} style={{ ...S.filterBtn, ...(filter === val ? S.filterBtnActive : {}) }}
-              onClick={() => setFilter(val)}>{label}</button>
+          {[['all','All'],['strong','Strong (75+)'],['needs','Needs Work'],['critical','Critical (<50)'],['error','Errors'],['lam','LAM Only']].map(([val,label]) => (
+            <button key={val} style={{ ...S.filterBtn, ...(filter === val ? S.filterBtnActive : {}) }} onClick={() => setFilter(val)}>{label}</button>
           ))}
           <input style={S.searchInput} placeholder="Search URLs..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
@@ -355,7 +344,7 @@ export default function Dashboard() {
                   <>
                     {!isLam && (
                       <div style={S.bars}>
-                        {[['Trust', item.trust_score], ['Conversion', item.conversion_score], ['Security', item.security_score], ['Mobile', item.mobile_score]].map(([label, val]) => (
+                        {[['Trust', item.trust_score],['Conversion', item.conversion_score],['Security', item.security_score],['Mobile', item.mobile_score]].map(([label, val]) => (
                           val ? <div key={label as string} style={S.barItem}>
                             <div style={S.barLabel}><span>{label}</span><span style={{ color: sc(val as number) }}>{val}/100</span></div>
                             <div style={S.barTrack}><div style={{ ...S.barFill, width: `${val}%`, background: sc(val as number) }} /></div>
@@ -365,7 +354,7 @@ export default function Dashboard() {
                     )}
                     {isLam && (
                       <div style={S.bars}>
-                        {[['LAM', item.lam_score], ['ADA', item.ada_score], ['SOC', item.soc_score], ['Conversion', item.conversion_score]].map(([label, val]) => (
+                        {[['LAM', item.lam_score],['ADA', item.ada_score],['SOC', item.soc_score],['Conversion', item.conversion_score]].map(([label, val]) => (
                           val ? <div key={label as string} style={S.barItem}>
                             <div style={S.barLabel}><span>{label}</span><span style={{ color: sc(val as number) }}>{val}/100</span></div>
                             <div style={S.barTrack}><div style={{ ...S.barFill, width: `${val}%`, background: sc(val as number) }} /></div>
@@ -382,11 +371,11 @@ export default function Dashboard() {
                           <div>
                             <div style={{ ...S.detailHead, color: '#f87171' }}>🔴 Problems Found</div>
                             {(r.ux_friction_points || []).map((p: string, i: number) => <div key={i} style={S.detailItem}>⚠ {p}</div>)}
-                            {!(r.ux_friction_points || []).length && <div style={{ ...S.detailItem, color: '#334155' }}>None detected</div>}
+                            {!(r.ux_friction_points||[]).length && <div style={{ ...S.detailItem, color: '#334155' }}>None detected</div>}
                           </div>
                           <div>
                             <div style={{ ...S.detailHead, color: '#4ade80' }}>🟢 How to Fix</div>
-                            {(r.resolution_steps || []).map((p: string, i: number) => <div key={i} style={S.detailItem}><span style={{ color: '#4ade80', fontWeight: 700 }}>0{i + 1}</span> {p}</div>)}
+                            {(r.resolution_steps || []).map((p: string, i: number) => <div key={i} style={S.detailItem}><span style={{ color: '#4ade80', fontWeight: 700 }}>0{i+1}</span> {p}</div>)}
                           </div>
                           <div>
                             <div style={{ ...S.detailHead, color: '#fbbf24' }}>💰 Revenue Opportunities</div>
@@ -400,7 +389,7 @@ export default function Dashboard() {
                         <div style={{ padding: '16px 20px' }}>
                           <div style={{ ...S.detailHead, color: '#818cf8', marginBottom: '10px' }}>📋 Top Actions</div>
                           {(item.executive_brief?.top_3_actions || []).map((a: string, i: number) => (
-                            <div key={i} style={{ ...S.detailItem, marginBottom: '6px' }}><span style={{ color: '#818cf8', fontWeight: 700 }}>0{i + 1}</span> {a}</div>
+                            <div key={i} style={{ ...S.detailItem, marginBottom: '6px' }}><span style={{ color: '#818cf8', fontWeight: 700 }}>0{i+1}</span> {a}</div>
                           ))}
                         </div>
                       </div>
