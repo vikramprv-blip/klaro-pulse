@@ -138,65 +138,39 @@ def call_llm(prompt):
 
 def get_lam_llm():
     """
-    Browser-Use LLM selector.
-    Priority: Cerebras (llama-3.3-70b) -> SambaNova (Llama-3.3-70B) -> Groq fallback
-    Both Cerebras and SambaNova use OpenAI-compatible APIs with json_schema support.
+    Browser-Use LLM - uses langchain_groq.ChatGroq which has .provider attribute
+    compatible with browser-use. Groq is fast, free, and works natively.
     """
-    # 1. Cerebras — fastest inference, free tier, llama-3.3-70b
+    # 1. Groq with llama-3.3-70b — native browser-use .provider support
     try:
-        from langchain_openai import ChatOpenAI
-        if CEREBRAS_KEY:
-            llm = ChatOpenAI(
-                model="llama-3.3-70b",
-                api_key=CEREBRAS_KEY,
-                base_url="https://api.cerebras.ai/v1",
-                temperature=0.2,
-                max_tokens=4000,
-            )
-            print("  Using Cerebras (llama-3.3-70b) for Browser Use")
-            return llm
-    except Exception as e:
-        print(f"  Cerebras browser-use failed: {e}")
-
-    # 2. SambaNova — OpenAI-compatible, json_schema support
-    try:
-        from langchain_openai import ChatOpenAI
-        if SAMBANOVA_KEY:
-            llm = ChatOpenAI(
-                model="Meta-Llama-3.3-70B-Instruct",
-                api_key=SAMBANOVA_KEY,
-                base_url="https://api.sambanova.ai/v1",
-                temperature=0.2,
-                max_tokens=4000,
-            )
-            print("  Using SambaNova (Llama-3.3-70B-Instruct) for Browser Use")
-            return llm
-    except Exception as e:
-        print(f"  SambaNova browser-use failed: {e}")
-
-    # 3. Groq — last resort, smaller model but reliable
-    try:
-        from browser_use import ChatGroq
+        from langchain_groq import ChatGroq
         if GROQ_KEY:
             os.environ["GROQ_API_KEY"] = GROQ_KEY
-            llm = ChatGroq(model="llama-3.1-8b-instant")
-            print("  Using Groq (llama-3.1-8b-instant) for Browser Use")
+            llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, max_tokens=4000)
+            print("  Using Groq llama-3.3-70b-versatile for Browser Use")
             return llm
     except Exception as e:
-        print(f"  Groq browser-use failed: {e}")
-
-    # 4. OpenAI last resort
+        print(f"  Groq 3.3-70b failed: {e}")
+    # 2. Groq smaller model
     try:
-        from browser_use import ChatOpenAI
+        from langchain_groq import ChatGroq
+        if GROQ_KEY:
+            llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
+            print("  Using Groq llama-3.1-8b-instant for Browser Use")
+            return llm
+    except Exception as e:
+        print(f"  Groq 3.1-8b failed: {e}")
+    # 3. OpenAI fallback
+    try:
+        from langchain_openai import ChatOpenAI
         if OPENAI_KEY:
             os.environ["OPENAI_API_KEY"] = OPENAI_KEY
-            llm = ChatOpenAI(model="gpt-4o-mini")
-            print("  Using OpenAI (gpt-4o-mini) for Browser Use")
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+            print("  Using OpenAI gpt-4o-mini for Browser Use")
             return llm
     except Exception as e:
-        print(f"  OpenAI browser-use failed: {e}")
-
-    raise Exception("No LLM available for Browser Use — set CEREBRAS_API_KEY or SAMBANOVA_API_KEY")
+        print(f"  OpenAI failed: {e}")
+    raise Exception("No LLM available — set GROQ_API_KEY")
 
 def extract_json(text):
     try:
