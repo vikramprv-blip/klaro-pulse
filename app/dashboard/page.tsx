@@ -79,8 +79,7 @@ export default function Dashboard() {
   const isAdmin = profile?.is_admin || false
 
   const isLocked = (feature: string) => {
-    if (!profileLoaded) return false
-    if (isAdmin) return false
+    if (!profileLoaded || isAdmin) return false
     if (feature === 'bulk') return !limits.bulk
     if (feature === 'lam') return !limits.lam
     if (feature === 'compare') return limits.compare === 0
@@ -89,30 +88,25 @@ export default function Dashboard() {
 
   async function triggerScan(url: string, scanType = 'llm') {
     setScanning(true)
-    setScanStatus({ msg: `Queuing scan for ${url}...`, type: 'scanning' })
+    setScanStatus({ msg: `⏳ Scanning ${url}...`, type: 'scanning' })
     try {
-      const { data: scanRow, error: insertError } = await sb.from('pulse_scans').insert({
-        user_id: user.id, url, scan_type: scanType,
-        status: 'pending', progress: 0, progress_message: 'Queued...'
-      }).select().single()
-
-      if (insertError || !scanRow) throw new Error(insertError?.message || 'Could not create scan record')
-
       if (scanType === 'lam') {
+        // LAM → create row then trigger GitHub
         const res = await fetch('/api/pulse/trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ target_url: url, scan_mode: 'lam', scan_id: scanRow.id })
+          body: JSON.stringify({ target_url: url, scan_mode: 'lam' })
         })
         const data = await res.json()
         if (data.ok) setScanStatus({ msg: `🤖 ${data.message}`, type: 'success' })
         else throw new Error(data.error || 'LAM trigger failed')
       } else {
+        // LLM → API route handles everything including DB insert
         setScanStatus({ msg: `⏳ Scanning ${url} — takes 30-60 seconds...`, type: 'scanning' })
         const res = await fetch('/api/pulse/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scan_id: scanRow.id, url })
+          body: JSON.stringify({ url })
         })
         const data = await res.json()
         if (data.ok) {
@@ -222,9 +216,6 @@ export default function Dashboard() {
               <div style={{ fontWeight: 700, color: 'white', marginBottom: '6px' }}>
                 {mode === 'lam' ? '🤖 LAM Audit — Agency plan ($599/mo)' : mode === 'bulk' ? '⚡ Bulk scanning — Growth plan ($399/mo)' : '📊 Compare — Starter plan ($149/mo)'}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                {mode === 'lam' ? 'AI visits your site as a real client. Full ADA, SOC & conversion audit.' : mode === 'bulk' ? 'Scan multiple sites at once. Perfect for agencies.' : 'Side-by-side scores. Perfect for prospect meetings.'}
-              </div>
               <a href="/settings" style={S.upgradeBtn}>Upgrade Plan →</a>
             </div>
           ) : (
@@ -249,9 +240,7 @@ export default function Dashboard() {
                     {compareUrls.length < limits.compare && (
                       <button style={S.ghostBtn} onClick={() => setCompareUrls([...compareUrls, ''])}>+ Add URL</button>
                     )}
-                    <button style={S.scanBtn} onClick={handleScan} disabled={scanning}>
-                      {scanning ? '⏳ Scanning...' : 'Compare All →'}
-                    </button>
+                    <button style={S.scanBtn} onClick={handleScan} disabled={scanning}>Compare All →</button>
                   </div>
                 </div>
               )}
@@ -260,15 +249,13 @@ export default function Dashboard() {
                   <textarea style={{ ...S.urlInput, height: '100px', resize: 'vertical' as const, width: '100%', boxSizing: 'border-box' as const }}
                     placeholder={'https://site1.com\nhttps://site2.com\nhttps://site3.com'}
                     value={bulkText} onChange={e => setBulkText(e.target.value)} />
-                  <button style={{ ...S.scanBtn, marginTop: '8px' }} onClick={handleScan} disabled={scanning}>
-                    {scanning ? '⏳ Scanning...' : 'Run Bulk Scan →'}
-                  </button>
+                  <button style={{ ...S.scanBtn, marginTop: '8px' }} onClick={handleScan} disabled={scanning}>Run Bulk Scan →</button>
                 </div>
               )}
               {mode === 'lam' && (
                 <div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                    �� AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
+                    🤖 AI visits your site as a real potential client. Tests contact, auth, ADA & SOC. Takes 8-12 min.
                   </div>
                   <div style={S.inputRow}>
                     <input style={S.urlInput} type="url" placeholder="https://yoursite.com" value={lamUrl}
