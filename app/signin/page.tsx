@@ -15,7 +15,7 @@ export default function SignIn() {
     const sb = createClient()
     const { error } = await sb.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    window.location.href = '/dashboard'
+    window.location.href = 'https://klaro.services/pulse/dashboard'
   }
 
   return (
