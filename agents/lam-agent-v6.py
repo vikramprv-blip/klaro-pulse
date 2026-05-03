@@ -686,6 +686,39 @@ async def run_lam_audit(target_url: str):
     total_pages = sum(len(d['pages']) for d in all_country_data)
     print(f"\n  Browse complete: {total_pages} pages across {len(all_country_data)} region(s) in {elapsed_browse}s")
 
+    # ── Google PageSpeed Insights (free, no key needed) ─────────────────────
+    pagespeed_data = {}
+    try:
+        import requests as _psi
+        print("\n  Fetching Google PageSpeed Insights...")
+        for strategy in ['mobile', 'desktop']:
+            psi_url = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={target_url}&strategy={strategy}"
+            r = _psi.get(psi_url, timeout=30)
+            if r.status_code == 200:
+                psi = r.json()
+                cats = psi.get('lighthouseResult', {}).get('categories', {})
+                audits = psi.get('lighthouseResult', {}).get('audits', {})
+                pagespeed_data[strategy] = {
+                    'performance_score': int((cats.get('performance', {}).get('score', 0) or 0) * 100),
+                    'accessibility_score': int((cats.get('accessibility', {}).get('score', 0) or 0) * 100),
+                    'seo_score': int((cats.get('seo', {}).get('score', 0) or 0) * 100),
+                    'best_practices_score': int((cats.get('best-practices', {}).get('score', 0) or 0) * 100),
+                    'fcp': audits.get('first-contentful-paint', {}).get('displayValue', 'N/A'),
+                    'lcp': audits.get('largest-contentful-paint', {}).get('displayValue', 'N/A'),
+                    'tbt': audits.get('total-blocking-time', {}).get('displayValue', 'N/A'),
+                    'cls': audits.get('cumulative-layout-shift', {}).get('displayValue', 'N/A'),
+                    'speed_index': audits.get('speed-index', {}).get('displayValue', 'N/A'),
+                    'tti': audits.get('interactive', {}).get('displayValue', 'N/A'),
+                    'opportunities': [
+                        {'title': a.get('title'), 'savings': a.get('displayValue')}
+                        for k, a in audits.items()
+                        if a.get('details', {}).get('type') == 'opportunity' and a.get('score', 1) < 0.9
+                    ][:5]
+                }
+                print(f"    PageSpeed {strategy}: perf={pagespeed_data[strategy]['performance_score']}, a11y={pagespeed_data[strategy]['accessibility_score']}, seo={pagespeed_data[strategy]['seo_score']}")
+    except Exception as e:
+        print(f"    PageSpeed failed: {e}")
+
     # ── Upload screenshots to Supabase Storage ────────────────────────────────
     screenshot_urls = {}
     print("\n  Uploading screenshots...")
@@ -738,7 +771,7 @@ async def run_lam_audit(target_url: str):
 
     pages_list = primary['pages']
     page_texts_summary = "\n".join([
-        f"[{k}] {v[:1500]}" for k, v in list(primary['page_texts'].items())[:12]
+        f"[{k}] {v[:300]}" for k, v in list(primary['page_texts'].items())[:4]
     ])
 
     system = "You are a world-class digital consultant producing a comprehensive LAM audit report. Be specific, actionable, and brutally honest. Return only valid JSON."
@@ -776,14 +809,30 @@ PERFORMANCE:
 - Performance data: {json.dumps(primary.get('performance', {}))}
 - Mobile issues: {json.dumps(primary['mobile_viewport_issues'])}
 
+GOOGLE PAGESPEED INSIGHTS (authoritative Google data):
+Desktop: perf={pagespeed_data.get('desktop', {}).get('performance_score', 'N/A')}, a11y={pagespeed_data.get('desktop', {}).get('accessibility_score', 'N/A')}, seo={pagespeed_data.get('desktop', {}).get('seo_score', 'N/A')}, best-practices={pagespeed_data.get('desktop', {}).get('best_practices_score', 'N/A')}
+Desktop Core Web Vitals: FCP={pagespeed_data.get('desktop', {}).get('fcp', 'N/A')}, LCP={pagespeed_data.get('desktop', {}).get('lcp', 'N/A')}, TBT={pagespeed_data.get('desktop', {}).get('tbt', 'N/A')}, CLS={pagespeed_data.get('desktop', {}).get('cls', 'N/A')}, TTI={pagespeed_data.get('desktop', {}).get('tti', 'N/A')}
+Mobile: perf={pagespeed_data.get('mobile', {}).get('performance_score', 'N/A')}, a11y={pagespeed_data.get('mobile', {}).get('accessibility_score', 'N/A')}, seo={pagespeed_data.get('mobile', {}).get('seo_score', 'N/A')}
+Mobile Core Web Vitals: FCP={pagespeed_data.get('mobile', {}).get('fcp', 'N/A')}, LCP={pagespeed_data.get('mobile', {}).get('lcp', 'N/A')}, TBT={pagespeed_data.get('mobile', {}).get('tbt', 'N/A')}, CLS={pagespeed_data.get('mobile', {}).get('cls', 'N/A')}
+PageSpeed opportunities: {json.dumps([o['title'] for o in pagespeed_data.get('desktop', {}).get('opportunities', [])])}
+
 CTA BUTTONS FOUND: {json.dumps(primary['cta_buttons'])}
 
 META DATA: {json.dumps(primary.get('meta_data', {}))}
 
 STRUCTURED DATA PRESENT: {'Yes, ' + str(len(primary.get('structured_data', []))) + ' schemas' if primary.get('structured_data') else 'None'}
 
-ADA CHECKS:
+ADA CHECKS (basic):
 {json.dumps(primary.get('ada_checks', {}), indent=2)}
+
+AXE-CORE WCAG 2.1 AA RESULTS (authoritative, not guessed):
+- Total violations: {primary.get('axe_results', {}).get('violations_count', 'not run')}
+- Critical: {primary.get('axe_results', {}).get('critical_count', 0)}
+- Serious: {primary.get('axe_results', {}).get('serious_count', 0)}
+- Moderate: {primary.get('axe_results', {}).get('moderate_count', 0)}
+- Minor: {primary.get('axe_results', {}).get('minor_count', 0)}
+- Passes: {primary.get('axe_results', {}).get('passes_count', 0)}
+Top violations: {json.dumps([v['help'] + ' (' + v['impact'] + ', ' + str(v['nodes_count']) + ' elements)' for v in primary.get('axe_results', {}).get('violations', [])[:8]], indent=2)}
 
 THIRD-PARTY SCRIPTS: {json.dumps(primary['third_party_scripts'][:15])}
 
@@ -1000,6 +1049,10 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
             "has_country_selector": has_country_selector,
             "elapsed_seconds": int(time.time() - audit_start),
             "screenshot_urls": screenshot_urls,
+            "axe_results": {k: v for k, v in primary.get("axe_results", {}).items() if k != "violations"} if primary.get("axe_results") else {},
+            "axe_violations": primary.get("axe_results", {}).get("violations", []),
+            "pagespeed": pagespeed_data,
+            "seo_audit": {k: v for k, v in primary.get("seo_audit", {}).items()},
             "performance_report": report.get("performance_report", {}),
             "content_quality": report.get("content_quality", {}),
             "tech_stack": report.get("tech_stack", {}),
