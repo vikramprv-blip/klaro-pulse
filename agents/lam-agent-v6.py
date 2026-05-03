@@ -570,49 +570,171 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
     }""")
     data["ada_checks"] = ada_checks
 
-    # ── Phase 4a: Functional testing ─────────────────────────────────────────
-    print(f"  {label_prefix}Phase 4a: Functional testing")
-    functional_results = {"signup_flow":"Not tested","login_flow":"Not tested","contact_form":"Not tested","cta_click":"Not tested","search":"Not tested","navigation":"Not tested"}
+    # ── Phase 4a: Functional testing + screenshots ───────────────────────
+    print(f"  {label_prefix}Phase 4a: Functional testing + page screenshots")
+    functional_results = {
+        "signup_flow": "Not tested", "login_flow": "Not tested",
+        "contact_form": "Not tested", "cta_click": "Not tested",
+        "search": "Not tested", "navigation": "Not tested",
+        "pricing_page": "Not tested", "404_page": "Not tested",
+    }
+    page_screenshots = {}
+
+    async def take_screenshot(label, pg=None):
+        try:
+            _pg = pg or page
+            shot = await _pg.screenshot(full_page=False, type="jpeg", quality=75)
+            page_screenshots[label] = shot
+            print(f"    📷 {label} ({len(shot)//1024}KB)")
+        except Exception as e:
+            print(f"    📷 {label} failed: {e}")
+
     try:
-        for sel in ["a[href*='signup']","button:has-text('Get Started')","a:has-text('Get Started')"]:
+        await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+        await page.wait_for_timeout(2000)
+
+        # CTA detection
+        for sel in ["a[href*='signup']","a[href*='sign-up']","a[href*='register']",
+                    "button:has-text('Get Started')","a:has-text('Get Started')",
+                    "button:has-text('Sign up')","a:has-text('Sign up')",
+                    "button:has-text('Try')","a:has-text('Book')"]:
             try:
                 cta = page.locator(sel).first
                 if await cta.count() > 0:
                     cta_text = await cta.inner_text()
                     cta_href = await cta.get_attribute("href") or ""
-                    functional_results["cta_click"] = f"I found CTA '{cta_text[:50]}' → {cta_href[:80]}"
+                    functional_results["cta_click"] = f"Found CTA '{cta_text[:50]}' linking to {cta_href[:80]}"
                     break
             except: pass
-        if data.get("has_contact_form"):
+
+        # Pricing page
+        pricing_pages = [p["url"] for p in data.get("pages",[]) if any(x in p["url"].lower() for x in ["pricing","price","plans","packages"])]
+        if pricing_pages:
             try:
-                curl = [p["url"] for p in data.get("pages",[]) if "contact" in p["url"].lower()]
-                if curl:
-                    await page.goto(curl[0], wait_until="domcontentloaded", timeout=15000)
-                    await page.wait_for_timeout(2000)
-                    filled = []
-                    for sel, val in [("input[type='email']","test@example.com"),("textarea","Testing contact form")]:
-                        try:
-                            el = page.locator(sel).first
-                            if await el.count() > 0: await el.fill(val); filled.append(sel)
-                        except: pass
-                    functional_results["contact_form"] = f"I visited {curl[0]} and {'filled ' + str(len(filled)) + ' fields' if filled else 'could not find form fields'}."
-                    await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
-            except Exception as e: functional_results["contact_form"] = f"Contact form: {str(e)[:80]}"
-        if data.get("has_login"):
+                await page.goto(pricing_pages[0], wait_until="domcontentloaded", timeout=15000)
+                await page.wait_for_timeout(2000)
+                await take_screenshot("pricing_page")
+                pricing_text = await page.evaluate("() => document.body.innerText.slice(0, 500)")
+                functional_results["pricing_page"] = f"Visited {pricing_pages[0]}. Content: {pricing_text[:300]}"
+                await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as e:
+                functional_results["pricing_page"] = f"Pricing page error: {str(e)[:80]}"
+        else:
+            functional_results["pricing_page"] = "No pricing page found — pricing not publicly available"
+
+        # Signup flow
+        signup_pages = [p["url"] for p in data.get("pages",[]) if any(x in p["url"].lower() for x in ["signup","sign-up","register","get-started","trial"])]
+        if signup_pages:
             try:
-                lurl = [p["url"] for p in data.get("pages",[]) if any(x in p["url"].lower() for x in ["login","signin"])]
-                if lurl:
-                    await page.goto(lurl[0], wait_until="domcontentloaded", timeout=15000)
-                    await page.wait_for_timeout(2000)
-                    em = page.locator("input[type='email']").first
-                    pw = page.locator("input[type='password']").first
-                    functional_results["login_flow"] = f"I visited {lurl[0]} — {'email+password fields found' if await em.count()>0 and await pw.count()>0 else 'fields not found'}."
-                    await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
-            except Exception as e: functional_results["login_flow"] = f"Login: {str(e)[:80]}"
-        functional_results["navigation"] = f"I found {len(data.get('nav_links',[]))} navigation links."
+                await page.goto(signup_pages[0], wait_until="domcontentloaded", timeout=15000)
+                await page.wait_for_timeout(2000)
+                await take_screenshot("signup_page")
+                fields = await page.evaluate("""() => {
+                    const inputs = Array.from(document.querySelectorAll('input:not([type=hidden])'));
+                    return inputs.map(i => ({type: i.type, placeholder: i.placeholder, name: i.name})).slice(0,8);
+                }""")
+                field_desc = ", ".join([f"{f['type']}({f.get('placeholder') or f.get('name') or 'unnamed'})" for f in fields]) or "no fields found"
+                filled = []
+                for sel, val in [
+                    ("input[type='email']", "test.audit@example.com"),
+                    ("input[type='text']", "Test Auditor"),
+                    ("input[type='password']", "TestPass123!"),
+                ]:
+                    try:
+                        el = page.locator(sel).first
+                        if await el.count() > 0:
+                            await el.fill(val)
+                            filled.append(sel.split("'")[1])
+                    except: pass
+                functional_results["signup_flow"] = f"Visited {signup_pages[0]}. Fields: {field_desc}. Filled {len(filled)}: {', '.join(filled) if filled else 'none'}."
+                await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as e:
+                functional_results["signup_flow"] = f"Signup at {signup_pages[0]} — error: {str(e)[:100]}"
+        else:
+            functional_results["signup_flow"] = "No signup page found across all crawled pages"
+
+        # Login flow
+        login_pages = [p["url"] for p in data.get("pages",[]) if any(x in p["url"].lower() for x in ["login","signin","sign-in","auth"])]
+        if login_pages:
+            try:
+                await page.goto(login_pages[0], wait_until="domcontentloaded", timeout=15000)
+                await page.wait_for_timeout(2000)
+                await take_screenshot("login_page")
+                em = page.locator("input[type='email'], input[name*='email'], input[name*='username']").first
+                pw = page.locator("input[type='password']").first
+                has_email = await em.count() > 0
+                has_pw = await pw.count() > 0
+                social = await page.evaluate("""() => {
+                    const t = document.body.innerText.toLowerCase();
+                    const b = Array.from(document.querySelectorAll('button,a')).map(x=>x.innerText.toLowerCase());
+                    return {google:b.some(x=>x.includes('google')),github:b.some(x=>x.includes('github')),
+                            sso:t.includes('sso')||t.includes('saml'),forgot:t.includes('forgot')||t.includes('reset password')}
+                }""")
+                extras = [k for k,v in social.items() if v]
+                functional_results["login_flow"] = (
+                    f"Visited {login_pages[0]}. Email: {'✓' if has_email else '✗'}, Password: {'✓' if has_pw else '✗'}. "
+                    f"Extras: {', '.join(extras) if extras else 'none'}."
+                )
+                await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as e:
+                functional_results["login_flow"] = f"Login at {login_pages[0]} — error: {str(e)[:100]}"
+        else:
+            functional_results["login_flow"] = "No login page found — site may not have authenticated area"
+
+        # Contact form
+        contact_pages = [p["url"] for p in data.get("pages",[]) if any(x in p["url"].lower() for x in ["contact","reach","touch","demo","book","schedule"])]
+        if contact_pages:
+            try:
+                await page.goto(contact_pages[0], wait_until="domcontentloaded", timeout=15000)
+                await page.wait_for_timeout(2000)
+                await take_screenshot("contact_page")
+                filled = []
+                for sel, val in [
+                    ("input[type='email']","test.audit@example.com"),
+                    ("input[type='text']","Test Auditor"),
+                    ("textarea","Testing contact form as part of a website audit."),
+                ]:
+                    try:
+                        el = page.locator(sel).first
+                        if await el.count() > 0:
+                            await el.fill(val)
+                            filled.append(sel.split("'")[1])
+                    except: pass
+                functional_results["contact_form"] = f"Visited {contact_pages[0]}. Filled {len(filled)} fields: {', '.join(filled) if filled else 'none found'}."
+                await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as e:
+                functional_results["contact_form"] = f"Contact error: {str(e)[:100]}"
+        else:
+            functional_results["contact_form"] = "No contact page found — major conversion barrier"
+
+        # 404 test
+        try:
+            await page.goto(f"{target_url}/klaro-test-404-xyz", wait_until="domcontentloaded", timeout=10000)
+            await page.wait_for_timeout(1000)
+            await take_screenshot("404_page")
+            has_nav = await page.evaluate("() => document.querySelectorAll('nav a, header a').length > 0")
+            page_text = await page.evaluate("() => document.body.innerText.slice(0,150)")
+            functional_results["404_page"] = f"404 page: has navigation {'Yes' if has_nav else 'No — users get stranded'}. Content: {page_text[:100]}"
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+        except Exception as e:
+            functional_results["404_page"] = f"404 test error: {str(e)[:80]}"
+
+        # Navigation
+        nav_labels = await page.evaluate("""() =>
+            Array.from(document.querySelectorAll('nav a, header a'))
+                .map(a => a.innerText.trim()).filter(Boolean).slice(0,15)""")
+        functional_results["navigation"] = (
+            f"{len(data.get('nav_links',[]))} nav links. Items: {', '.join(nav_labels[:10]) if nav_labels else 'none'}. "
+            f"{'Minimal navigation — may hinder discovery.' if len(data.get('nav_links',[])) < 4 else 'Navigation structure adequate.'}"
+        )
+
+        data["page_screenshots"] = page_screenshots
         data["functional_results"] = functional_results
-        print(f"    ✓ Functional tests done")
-    except Exception as e: print(f"    Functional error: {e}"); data["functional_results"] = functional_results
+        print(f"    ✓ Functional tests done — {len(page_screenshots)} screenshots taken")
+    except Exception as e:
+        print(f"    Functional error: {e}")
+        data["functional_results"] = functional_results
+        data["page_screenshots"] = page_screenshots
 
     # ── Phase 4b: axe-core + ARIA ────────────────────────────────────────────
     try:
@@ -852,21 +974,26 @@ async def run_lam_audit(target_url: str):
     encoded_url = urllib.parse.quote(target_url, safe='')
 
     # Find or create run
-    existing = supabase_request("GET", f"lam_runs?url=eq.{encoded_url}&status=eq.pending&order=created_at.desc&limit=1")
-    run_id = None
-    if existing and len(existing) > 0:
-        run_id = existing[0]["id"]
-        print(f"  Found existing run: {run_id}")
+    # Use run ID passed by local runner if available
+    run_id = os.getenv("LAM_RUN_ID", None)
+    if run_id:
+        print(f"  Using runner-provided run_id: {run_id}")
         supabase_update(run_id, {"status": "running", "progress": 5, "progress_message": "Agent starting deep crawl..."})
     else:
-        run_id = supabase_insert({
-            "url": target_url,
-            "status": "running",
-            "progress": 5,
-            "progress_message": "Agent starting deep crawl...",
-            "user_id": user_id,
-            "triggered_by": "docker-local"
-        })
+        existing = supabase_request("GET", f"lam_runs?url=eq.{encoded_url}&status=eq.pending&order=created_at.desc&limit=1")
+        if existing and len(existing) > 0:
+            run_id = existing[0]["id"]
+            print(f"  Found existing run: {run_id}")
+            supabase_update(run_id, {"status": "running", "progress": 5, "progress_message": "Agent starting deep crawl..."})
+        else:
+            run_id = supabase_insert({
+                "url": target_url,
+                "status": "running",
+                "progress": 5,
+                "progress_message": "Agent starting deep crawl...",
+                "user_id": user_id,
+                "triggered_by": "docker-local"
+            })
         print(f"  Created run: {run_id}")
 
     audit_start = time.time()
@@ -942,7 +1069,10 @@ async def run_lam_audit(target_url: str):
     print("\n  Uploading screenshots...")
     for cd in all_country_data:
         country = cd.get('country','main') or 'main'
-        for shot_label, shot_bytes in cd.get('screenshots',{}).items():
+        all_shots = {}
+        all_shots.update(cd.get('screenshots', {}))
+        all_shots.update(cd.get('page_screenshots', {}))
+        for shot_label, shot_bytes in all_shots.items():
             if not shot_bytes: continue
             try:
                 path = f"lam/{run_id}/{country}/{shot_label}.jpg"
@@ -1222,11 +1352,44 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
       "expected_score_improvement": 18
     }},
     "expected_outcome_90_days": "specific, measurable outcome for this business",
-    "roi_estimate": "estimated ROI from implementing this roadmap"
+    "friction_cost_note": "IMPORTANT: Do NOT make specific revenue promises. Instead write: Based on industry conversion benchmarks for [industry type], sites with similar friction patterns typically see [X]% lower conversion than optimised peers. This is an illustrative benchmark only, not a financial projection or guarantee."
+  }},
+  "soc_readiness": {{
+    "overall_readiness": "Not Ready/Partial/Approaching/Ready",
+    "narrative": "3-4 sentences on SOC 2 readiness based on publicly observable signals only",
+    "cc6_access_control": "What login/auth/access controls are visible? MFA indicators? Session management?",
+    "cc7_system_operations": "Error handling quality, uptime indicators, status page, monitoring signals visible",
+    "cc2_communication": "Privacy policy quality, terms completeness, cookie consent implementation, data collection transparency",
+    "availability": "Is there an SLA or uptime commitment visible? Status page?",
+    "encryption": "HTTPS enforced? Certificate quality? Mixed content?",
+    "vendor_risk": "Third party scripts that represent data risk",
+    "gaps": ["specific gap 1", "specific gap 2", "specific gap 3"],
+    "recommended_controls": ["control 1", "control 2", "control 3"]
+  }},
+  "seo_page_analysis": {{
+    "narrative": "3-4 sentences summarising SEO health across all crawled pages",
+    "critical_issues": ["issue with specific page URL", "issue with specific element"],
+    "title_tag_assessment": "Overall assessment of title tags across crawled pages — cite specific missing/duplicate ones",
+    "meta_description_assessment": "Overall assessment of meta descriptions — cite specific pages missing them",
+    "heading_structure": "Assessment of H1/H2 hierarchy across pages — cite specific violations",
+    "internal_linking": "Assessment of internal link structure quality",
+    "content_depth": "Assessment of content depth — which pages are thin, which have good depth",
+    "quick_wins": ["specific SEO fix 1 with page URL", "specific fix 2", "specific fix 3", "specific fix 4", "specific fix 5"]
+  }},
+  "security_assessment": {{
+    "narrative": "4-5 sentences on overall security posture based on publicly observable signals",
+    "https_quality": "Certificate details, HSTS, mixed content assessment",
+    "headers_assessment": "Security headers observable — CSP, X-Frame-Options, referrer policy etc",
+    "data_exposure_risk": "PII collection without consent, form security, third party data sharing",
+    "authentication_security": "Login page security signals — brute force protection, captcha, MFA options",
+    "third_party_risk": "Detailed assessment of each third party script and its data risk",
+    "email_security_summary": "SPF/DKIM/DMARC status and what it means for this business specifically",
+    "vulnerabilities": ["specific observable vulnerability 1", "specific vulnerability 2"],
+    "recommendations": ["specific fix 1", "specific fix 2", "specific fix 3"]
   }}
 }}"""
 
-    result_text = call_llm(prompt, system, max_tokens=6000)
+    result_text = call_llm(prompt, system, max_tokens=8000)
     report = extract_json(result_text)
 
     if not report or not report.get("overall_score"):
@@ -1271,14 +1434,16 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
         "competitive_intel": report.get("competitive_intel", {}),
         "strengths": report.get("strengths", []),
         "roadmap": report.get("roadmap", {}),
+
         "raw_data": {
-            "browser_data": {k: v for k, v in primary.items() if k not in ["page_texts","pages","screenshots"]},
+            "browser_data": {k: v for k, v in primary.items() if k not in ["page_texts","pages","screenshots","page_screenshots"]},
             "pages_crawled": len(pages_list),
             "countries_scanned": len(all_country_data),
             "has_country_selector": has_country_selector,
             "elapsed_seconds": int(time.time() - audit_start),
             "screenshot_urls": screenshot_urls,
             "functional_results": primary.get("functional_results", {}),
+            "functional_screenshots": {k: v for k, v in screenshot_urls.items() if k not in ["main_desktop_home", "main_mobile_home"]},
             "axe_results": {k:v for k,v in primary.get("axe_results",{}).items() if k!="violations"} if primary.get("axe_results") else {},
             "axe_violations": primary.get("axe_results",{}).get("violations",[]),
             "aria_audit": primary.get("aria_audit",{}),
@@ -1288,6 +1453,9 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
             "pagespeed": primary.get("pagespeed", {}),
             "email_security": primary.get("email_security", {}),
             "performance_report": report.get("performance_report", {}),
+            "soc_readiness": report.get("soc_readiness", {}),
+            "seo_page_analysis": report.get("seo_page_analysis", {}),
+            "security_assessment": report.get("security_assessment", {}),
             "content_quality": report.get("content_quality", {}),
             "tech_stack": report.get("tech_stack", {}),
             "multi_region": report.get("multi_region", {}),
