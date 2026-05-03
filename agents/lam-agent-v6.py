@@ -231,6 +231,7 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
     data = {
         "country": country_label,
         "pages": [],
+        "screenshots": {},
         "has_contact_form": False,
         "has_phone": False,
         "has_email": False,
@@ -331,6 +332,14 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
                     robots: document.querySelector('meta[name="robots"]')?.content || '',
                 })""")
                 data["meta_data"] = meta
+
+                # Desktop screenshot of homepage
+                try:
+                    shot_bytes = await page.screenshot(full_page=False, type="jpeg", quality=75)
+                    data["screenshots"]["desktop_home"] = shot_bytes
+                    print(f"    📷 Screenshot: desktop homepage ({len(shot_bytes)//1024}KB)")
+                except Exception as se:
+                    print(f"    Screenshot failed: {se}")
 
                 # Structured data
                 structured = await page.evaluate("""() => {
@@ -677,6 +686,38 @@ async def run_lam_audit(target_url: str):
     total_pages = sum(len(d['pages']) for d in all_country_data)
     print(f"\n  Browse complete: {total_pages} pages across {len(all_country_data)} region(s) in {elapsed_browse}s")
 
+    # ── Upload screenshots to Supabase Storage ────────────────────────────────
+    screenshot_urls = {}
+    print("\n  Uploading screenshots...")
+    import requests as _req_upload
+    for cd in all_country_data:
+        country = cd.get('country', 'main') or 'main'
+        for shot_label, shot_bytes in cd.get('screenshots', {}).items():
+            if not shot_bytes:
+                continue
+            try:
+                path = f"lam/{run_id}/{country}/{shot_label}.jpg"
+                upload_url = f"{SUPABASE_URL}/storage/v1/object/lam-screenshots/{path}"
+                r = _req_upload.post(
+                    upload_url,
+                    data=shot_bytes,
+                    headers={
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}",
+                        "Content-Type": "image/jpeg",
+                        "x-upsert": "true"
+                    },
+                    timeout=30
+                )
+                if r.status_code in [200, 201]:
+                    public_url = f"{SUPABASE_URL}/storage/v1/object/public/lam-screenshots/{path}"
+                    screenshot_urls[f"{country}_{shot_label}"] = public_url
+                    print(f"    ✓ Uploaded {shot_label} ({len(shot_bytes)//1024}KB)")
+                else:
+                    print(f"    ✗ Upload failed {shot_label}: {r.status_code} {r.text[:100]}")
+            except Exception as e:
+                print(f"    ✗ Screenshot upload error: {e}")
+
     if run_id:
         supabase_update(run_id, {"progress": 70, "progress_message": f"AI analysing {total_pages} pages..."})
 
@@ -953,11 +994,12 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
         "strengths": report.get("strengths", []),
         "roadmap": report.get("roadmap", {}),
         "raw_data": {
-            "browser_data": {k: v for k, v in primary.items() if k not in ["page_texts", "pages"]},
+            "browser_data": {k: v for k, v in primary.items() if k not in ["page_texts", "pages", "screenshots"]},
             "pages_crawled": len(pages_list),
             "countries_scanned": len(all_country_data),
             "has_country_selector": has_country_selector,
             "elapsed_seconds": int(time.time() - audit_start),
+            "screenshot_urls": screenshot_urls,
             "performance_report": report.get("performance_report", {}),
             "content_quality": report.get("content_quality", {}),
             "tech_stack": report.get("tech_stack", {}),
