@@ -253,25 +253,6 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
     base_domain = urlparse(target_url).netloc
     label_prefix = f"[{country_label}] " if country_label else ""
 
-    import requests as _hdr_req
-    try:
-        _hdr_r = _hdr_req.head(target_url, timeout=8, allow_redirects=True)
-        _hdrs = {k.lower(): v for k, v in _hdr_r.headers.items()}
-    except:
-        _hdrs = {}
-    _header_tech = {
-        "vercel": "x-vercel-id" in _hdrs or "x-vercel-cache" in _hdrs,
-        "cloudflare": "cf-ray" in _hdrs,
-        "nextjs": "next.js" in _hdrs.get("x-powered-by", "").lower(),
-        "nginx": "nginx" in _hdrs.get("server", "").lower(),
-        "apache": "apache" in _hdrs.get("server", "").lower(),
-        "shopify": "myshopify" in target_url or "shopify" in _hdrs.get("x-shopid", "").lower(),
-        "wordpress": "wordpress" in _hdrs.get("x-powered-by", "").lower(),
-        "office365": "outlook" in _hdrs.get("x-ms-exchange-organization", "").lower() or "protection.outlook.com" in _hdrs.get("received", "").lower(),
-        "server_raw": _hdrs.get("server", ""),
-        "powered_by_raw": _hdrs.get("x-powered-by", ""),
-    }
-
     data = {
         "country": country_label,
         "pages": [],
@@ -305,8 +286,7 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
         "meta_data": {},
         "structured_data": [],
         "social_links": [],
-        "errors": [],
-        "header_tech": _header_tech
+        "errors": []
     }
 
     visited_urls = set()
@@ -619,11 +599,7 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
         print(f"  {label_prefix}Phase 4b: axe-core + ARIA")
         await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
         await page.wait_for_timeout(3000)
-        axe_path = "/app/axe.min.js"
-        if os.path.exists(axe_path):
-            await page.add_script_tag(path=axe_path)
-        else:
-            await page.add_script_tag(url="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.9.1/axe.min.js")
+        await page.add_script_tag(url="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.9.1/axe.min.js")
         await page.wait_for_timeout(2000)
         axe_results = await page.evaluate("""async () => {
             try {
@@ -672,49 +648,6 @@ async def crawl_site(page, browser, target_url: str, country_label: str = "") ->
     except Exception as e:
         print(f"    axe/ARIA failed: {e}")
         data["axe_results"]={}; data["aria_audit"]={}; data["aria_issues"]=[]; data["keyboard_nav"]={}
-
-    # ── Phase 4b.5: Email security (SPF / DKIM / DMARC) ────────────────────
-    print(f"  {label_prefix}Phase 4b.5: Email security audit")
-    import dns.resolver as _dns
-    from urllib.parse import urlparse as _urlparse
-    _domain = _urlparse(target_url).netloc.replace("www.", "")
-    email_security = {"spf": {}, "dkim": {}, "dmarc": {}}
-    try:
-        spf_ans = _dns.resolve(_domain, "TXT")
-        for r in spf_ans:
-            txt = r.to_text().strip('"')
-            if txt.startswith("v=spf1"):
-                email_security["spf"] = {"configured": True, "value": txt, "is_permissive": "+all" in txt}
-                break
-        if not email_security["spf"]:
-            email_security["spf"] = {"configured": False}
-    except:
-        email_security["spf"] = {"configured": False}
-    try:
-        dmarc_ans = _dns.resolve(f"_dmarc.{_domain}", "TXT")
-        for r in dmarc_ans:
-            txt = r.to_text().strip('"')
-            if "DMARC1" in txt:
-                import re as _re
-                pol = _re.search(r'p=(\w+)', txt)
-                email_security["dmarc"] = {"configured": True, "value": txt, "policy": pol.group(1) if pol else "none"}
-                break
-        if not email_security["dmarc"].get("configured"):
-            email_security["dmarc"] = {"configured": False}
-    except:
-        email_security["dmarc"] = {"configured": False}
-    _dkim_selectors = ["selector1","selector2","google","default","mail","dkim","k1","s1","s2","microsoft","pm","mandrill","sendgrid","mailchimp","smtp","email","amazonses"]
-    email_security["dkim"] = {"configured": False}
-    for _sel in _dkim_selectors:
-        try:
-            _dns.resolve(f"{_sel}._domainkey.{_domain}", "TXT")
-            email_security["dkim"] = {"configured": True, "selector": _sel}
-            print(f"    DKIM found: selector={_sel}")
-            break
-        except:
-            pass
-    data["email_security"] = email_security
-    print(f"    SPF={email_security['spf'].get('configured')} DKIM={email_security['dkim'].get('configured')} DMARC={email_security['dmarc'].get('configured')}")
 
     # ── Phase 4c: PageSpeed ──────────────────────────────────────────────────
     pagespeed_data = {}
@@ -1029,8 +962,6 @@ STRUCTURED DATA PRESENT: {'Yes, ' + str(len(primary.get('structured_data', [])))
 ADA CHECKS:
 {json.dumps(primary.get('ada_checks', {}), indent=2)}
 
-HTTP HEADERS TECH DETECTION: {json.dumps(primary.get('header_tech', {}))}
-
 THIRD-PARTY SCRIPTS: {json.dumps(primary['third_party_scripts'][:15])}
 
 PAGES VISITED: {json.dumps([p['url'] for p in pages_list[:25]])}
@@ -1263,11 +1194,7 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
         "executive_brief": report.get("executive_brief", {}),
         "client_experience": report.get("client_experience", {}),
         "ada_report": report.get("ada_report", {}),
-        "soc_report": {
-            **report.get("soc_report", {}),
-            "email_security": primary.get("email_security", {}),
-            "email_provider": "Office 365" if primary.get("email_security", {}).get("dkim", {}).get("selector", "").startswith(("selector1","selector2","microsoft")) else "Unknown",
-        },
+        "soc_report": report.get("soc_report", {}),
         "competitive_intel": report.get("competitive_intel", {}),
         "strengths": report.get("strengths", []),
         "roadmap": report.get("roadmap", {}),
@@ -1286,7 +1213,6 @@ Return a JSON object with ALL these fields. Be highly specific to this actual si
             "keyboard_nav": primary.get("keyboard_nav",{}),
             "seo_audit": dict(primary.get("seo_audit",{})),
             "pagespeed": primary.get("pagespeed", {}),
-            "email_security": primary.get("email_security", {}),
             "performance_report": report.get("performance_report", {}),
             "content_quality": report.get("content_quality", {}),
             "tech_stack": report.get("tech_stack", {}),
